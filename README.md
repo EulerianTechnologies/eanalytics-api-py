@@ -13,7 +13,7 @@ Having a python 3 environment
 ## Installing
 
 ```
-pip install eulerian_analytics
+pip install eulerian_analytics_py_api
 ```
 
 ## Running
