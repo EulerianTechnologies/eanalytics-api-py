@@ -19,7 +19,7 @@ pip install eulerian_analytics
 ## Running
 
 ```
-from eulerian_analytics.datamining import download
+from eulerian_analytics_py_api.datamining import download
 path2file = download(
                 gridpool_name = grid,
                 datacenter = datacenter,

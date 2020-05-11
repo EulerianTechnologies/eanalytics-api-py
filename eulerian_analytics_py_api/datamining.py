@@ -1,4 +1,4 @@
-from .helper import log, has_api_error
+from .helper import _log, _has_api_error
 import requests
 import os
 import time
@@ -13,6 +13,7 @@ def download(
         payload: dict,
         output_path2file = '',
         override_file = False,
+        print_log = True
 ) -> str:
     """Download a datamining dataset from Eulerian Technologies API into a gzip archive.
 
@@ -44,6 +45,10 @@ def download(
             If set to True, will override output_path2file (if exists) with the new datamining content
             Default: False
 
+        print_log : bool, optional
+            If set to False, will not print log messages
+            Default: True
+
     Returns
     -------
     str
@@ -65,28 +70,28 @@ def download(
         os.mkdir(output_dir)
 
     if os.path.exists(output_path2file) and not override_file:
-        log(f'output_path2file={output_path2file} already exists, skipping download')
+        _log(f'output_path2file={output_path2file} already exists, skipping download', print_log)
         return output_path2file
 
-    log(f'output_path2file={output_path2file}')
+    _log(f'output_path2file={output_path2file}', print_log)
     base_url = 'https://%s.api.eulerian.%s/ea/v2/ea/%s/report/%s/' \
     %(gridpool_name, datacenter, website_name, datamining_type)
     http_headers = { 'Authorization' : f'Bearer {api_key}' }
 
     search_url = base_url + 'search.json'
     search_json = requests.get(search_url, params=payload, headers=http_headers).json()
-    if has_api_error(search_json):
+    if _has_api_error(search_json):
         return 0
 
     jobrun_id = search_json['jobrun_id']
     status_url =  base_url+'status.json'
     status_payload = { 'jobrun-id' : jobrun_id }
     ready = False
-    log(f'Waiting for jobrun_id={jobrun_id} to complete')
+    _log(f'Waiting for jobrun_id={jobrun_id} to complete', print_log)
     while not ready:
         time.sleep(5)
         status_json = requests.get(status_url, params=status_payload, headers=http_headers).json()
-        if has_api_error(status_json):
+        if _has_api_error(status_json):
             return 0
         if status_json['jobrun_status'] == 'COMPLETED':
             ready = True
@@ -94,13 +99,13 @@ def download(
     download_url = base_url+'download.json'
     download_payload = { 'output-as-csv' : 1, 'jobrun-id' : jobrun_id }
 
-    log('Downloading data')
+    _log('Downloading data', print_log)
     with  gzip.open(output_path2file, 'wb') as f:
         r = requests.get(download_url, params=download_payload, headers=http_headers, stream=True)
         for chunk in r.iter_content(1024*1024*5): # 5MB
             f.write(chunk)
 
-    log('Data downloaded')
+    _log('Data downloaded', print_log)
     return output_path2file
 
 def _build_output_path2file(website_name, datamining_type, payload):
