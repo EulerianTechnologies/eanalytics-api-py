@@ -1,6 +1,6 @@
-# Eulerian-Analytics
+# eulerian-analytics-py-api
 
-A python 3 module to download locally a datamining dataset from the Eulerian Technologies API
+A python 3 module to retrieve data from Eulerian Technologies API
 
 ## Getting Started
 
@@ -13,13 +13,13 @@ Having a python 3 environment
 ## Installing
 
 ```
-pip install eulerian_analytics_py_api
+pip install eulerian-analytics-py-api
 ```
 
 ## Running
 
 ```
-from eulerian_analytics_py_api.datamining import download
+from eulerian-analytics-py-api.datamining import download
 path2file = download(
                 gridpool_name = grid,
                 datacenter = datacenter,
