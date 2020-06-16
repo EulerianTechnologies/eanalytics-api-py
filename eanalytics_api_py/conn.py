@@ -357,8 +357,8 @@ class Conn:
                 with open(output_path2file_temp) as f:
                     uuid_object = ijson.items(f, 'headers.uuid')
                     for uuid in uuid_object:
-                        edw_json['query'] = 'KILL %s;'%(uuid)
-                        requests.post(search_url, headers=edw_http_headers, json=edw_json).json()
+                        cancel_url = f'{search_url}/{uuid}/cancel'
+                        requests.post(cancel_url, headers=edw_http_headers).json()
             except Exception as e:
                 print(e)
                 print('Could not kill the process uuid=%s'%(uuid))
