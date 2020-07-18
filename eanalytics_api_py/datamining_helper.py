@@ -111,4 +111,4 @@ def deduplicate_product_cols_file_2_df(
 
         df_list.append(df)
                                            
-    return pd.concat(df_list)
+    return pd.concat(df_list).reset_index().drop('index', 1)
