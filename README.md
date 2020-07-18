@@ -13,7 +13,13 @@ Having a python 3 environment
 ## Installing
 
 ```
-pip install eanalytics_api_py
+pip3 install eanalytics_api_py
+```
+
+## Upgrading
+
+```
+pip3 install eanalytics_api_py --upgrade
 ```
 
 ## Running
@@ -22,6 +28,10 @@ pip install eanalytics_api_py
 
 ```
 from  eanalytics_api_py.conn import Conn
+from  eanalytics_api_py.datamining_helper import deduplicate_product_cols_file_2_df
+import pandas as pd
+
+language = 'en'
 
 conn = Conn(
         gridpool_name='demo',
@@ -45,10 +55,20 @@ path2file = conn.download_datamining(
                     'with-cgiparam':1,
                     'with-channel-count':1,
                     'with-channel-level':1
+                    'with-orderproduct' : 1,
+                    'with-productparam' : 1,
+                    'with-productgroup' : 1,
+                    'ea-lg' : language,
                 },
                 output_filename = 'demo_orders.csv.gzip',
                 output_directory = '',
                 override_file=True
+)
+
+# load into pandas dataframe and normalize product columns
+df = deduplicate_product_cols_file_2_df(
+        path2file,
+        language=language
 )
 ```
 - Use [this doc](https://doc.api.eulerian.com/#tag/Datamining:-sales%2Fpaths%2F~1ea~1%7Bsite%7D~1report~1order~1download.json%2Fget) to customize your payload object: 
