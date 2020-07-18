@@ -22,7 +22,7 @@ class Conn:
         api_key : str, obligatory
             Your Eulerian Technologies user account API key
 
-        pprint_log : bool, optional
+        print_log : bool, optional
             If set to False, will not print log messages
             Default: True
 
