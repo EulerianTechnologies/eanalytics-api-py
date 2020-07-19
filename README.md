@@ -104,6 +104,7 @@ TODO: query builder doc
 - The file downloaded is gzipped
 - Explore your data using jupyter-notebook along with pandas and seaborn for plug'n'play data cleaning/visualisation
 - Samples jupyter notebooks featuring different use-cases will be uploaded in the near future
+- A docker image containing jupyter and our librairy is available [here](https://hub.docker.com/repository/docker/soloan/eanalytics-jupyter/general)
 
 ## Author
 
