@@ -165,21 +165,54 @@ class Conn:
                     return 0
                 if status_json['jobrun_status'] == 'COMPLETED':
                     ready = True
+                self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
 
         self.__log('Downloading data')
         download_url = self.__base_url+'/ea/v2/ea/%s/report/%s/download.json'%(website_name, datamining_type)
-        download_payload = { 'output-as-csv' : 1, 'jobrun-id' : jobrun_id }
-        with  gzip.open(output_path2file, 'wb') as f:
+        download_payload = { 'output-as-csv' : 0, 'jobrun-id' : jobrun_id }
+
+        output_path2file_temp = output_path2file+'.tmp'
+
+        with  open(output_path2file_temp, 'wb') as f:
             r = requests.get(
                     download_url,
                     params = download_payload,
                     headers = self.__http_headers,
                     stream=True
             )
-            for chunk in r.iter_content(1024*1024*5): # 5MB
+            try:
+                self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024)} MBs")
+
+            except Exception as e:
+                self.__log("Could not read Content-Length header")
+
+            for chunk in r.iter_content(1024 * 1024 * 5): # 5MB
                 f.write(chunk)
 
-        self.__log('Data downloaded, path2file=%s'%(output_path2file))
+        self.__log('JSON data downloaded into path2file=%s'%(output_path2file_temp))
+        self.__log('Converting JSON to CSV...')
+
+        with gzip.open(output_path2file, 'wt') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=';')
+
+            with open(output_path2file_temp) as f:
+                headers_object = ijson.items(f, 'data.fields')
+                for headers in headers_object:
+                    csv_headers = [header['header'] for header in headers]
+                    csvwriter.writerow(csv_headers)
+              
+            with open(output_path2file_temp) as f:
+                rows_object = ijson.items(f, 'data.rows')
+                for rows in rows_object:
+                    for row in rows:
+                        csvwriter.writerow(row)
+
+        # removing temp file
+        if os.path.exists(output_path2file_temp):
+            self.__log('Deleting temp_file=%s'%(output_path2file_temp))
+            os.remove(output_path2file_temp)
+
+        self.__log('Output csv path2file=%s'%(output_path2file))
         return output_path2file
 
 
@@ -331,6 +364,12 @@ class Conn:
                     headers = self.__http_headers,
                     stream=True
             )
+            try:
+                self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024)} MBs")
+
+            except Exception as e:
+                self.__log("Could not read Content-Length header")
+
             for chunk in r.iter_content(1024*1024*5): # 5MB
                 f.write(chunk)
 

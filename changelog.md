@@ -1,3 +1,6 @@
+### 0.0.65
+Optimized download datamining with a lot of data  [datamining_helper](eanalytics_api_py/conn.py)
+
 ### 0.0.64
 Fix indexing issue in [datamining_helper](eanalytics_api_py/datamining_helper.py)
 

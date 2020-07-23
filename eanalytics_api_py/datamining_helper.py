@@ -8,7 +8,8 @@ def deduplicate_product_cols_file_2_df(
     quotechar='"',
     compression='gzip',
     encoding='utf-8',
-    language='en'
+    language='en',
+    dtype = {}
 ):
     """ Deduplicate product params columns
 
@@ -46,6 +47,10 @@ def deduplicate_product_cols_file_2_df(
             The language of the downloaded datamining file
             Default: 'en'  (fr/es/en)
             Note: Used to detect the product reference column
+
+        dtype : dict, optional
+            Set pandas column dtype to lower memory usage
+            Doc https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
 
     Returns
     -------
@@ -97,7 +102,8 @@ def deduplicate_product_cols_file_2_df(
             sep=sep,
             quotechar=quotechar,
             encoding=encoding,
-            usecols = col_names,
+            usecols=col_names,
+            dtype=dtype
         )
 
         df.columns = [ re.sub(pattern=regex_prdp, repl='', string=col_name) for col_name in df.columns ]
