@@ -95,6 +95,7 @@ class Conn:
             datamining_type: str,
             jobrun_id = None,
             payload = {},
+            status_waiting_seconds = 5,
             output_directory = None,
             output_filename = None,
             override_file = False,
@@ -115,6 +116,9 @@ class Conn:
 
             payload : dict, optional
                 The datamining payload that contains the requested data
+
+            status_waiting_seconds: int, optional
+                Waiting time in seconds between each status query
 
             output_directory : str, optional
                 The local targeted  directory
@@ -145,27 +149,30 @@ class Conn:
         if self.__skipping_download(output_path2file, override_file):
             return output_path2file
 
-        if jobrun_id:
-            self.__log('Fetching data from jobrun_id=%s' %(jobrun_id))
-        else:
+        if not jobrun_id:
             search_url = self.__base_url+'/ea/v2/ea/%s/report/%s/search.json'%(website_name, datamining_type)
             search_json = requests.get(search_url, params=payload, headers=self.__http_headers).json()
             if self.__has_api_error(search_json):
                 return 0
 
             jobrun_id = search_json['jobrun_id']
-            status_url =  self.__base_url+'/ea/v2/ea/%s/report/%s/status.json'%(website_name, datamining_type)
-            status_payload = { 'jobrun-id' : jobrun_id }
-            ready = False
+
+        status_url =  self.__base_url+'/ea/v2/ea/%s/report/%s/status.json'%(website_name, datamining_type)
+        status_payload = { 'jobrun-id' : jobrun_id }
+        ready = False
+        self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
+
+        if status_waiting_seconds < 5 or not isinstance(status_waiting_seconds, int):
+            status_waiting_seconds = 5
+
+        while not ready:
+            time.sleep(status_waiting_seconds)
+            status_json = requests.get(status_url, params=status_payload, headers=self.__http_headers).json()
+            if self.__has_api_error(status_json):
+                return 0
+            if status_json['jobrun_status'] == 'COMPLETED':
+                ready = True
             self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
-            while not ready:
-                time.sleep(5)
-                status_json = requests.get(status_url, params=status_payload, headers=self.__http_headers).json()
-                if self.__has_api_error(status_json):
-                    return 0
-                if status_json['jobrun_status'] == 'COMPLETED':
-                    ready = True
-                self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
 
         self.__log('Downloading data')
         download_url = self.__base_url+'/ea/v2/ea/%s/report/%s/download.json'%(website_name, datamining_type)
@@ -219,6 +226,7 @@ class Conn:
     def download_edw(
             self,
             query : str,
+            status_waiting_seconds=5,
             ip = None,
             token_path2file = None,
             force_token_refresh = False,
@@ -233,6 +241,9 @@ class Conn:
             ----------
             query: str, obligatory
                 EDW query
+
+             status_waiting_seconds: int, optional
+                Waiting time in seconds between each status query
 
             ip: str, optional
                 Coma separated ip values
@@ -305,8 +316,8 @@ class Conn:
         if self.__create_output_directory(output_directory): # error
             return 0
         if not output_filename:
-            output_filename = '_'.join([self.__gridpool_name, 'dw', time.time()])
-            output_filename += 'csv.gz'
+            output_filename = '_'.join([self.__gridpool_name, 'dw', str(int(time.time()))])
+            output_filename += '.csv.gz'
         output_path2file = os.path.join(output_directory, output_filename)
         output_path2file_temp = output_path2file+'.temp'
 
@@ -328,9 +339,7 @@ class Conn:
             'Content-Type' : 'application/json'
         }
 
-        if jobrun_id:
-            self.__log('Fetching file from jobrun_id=%s' %(jobrun_id))
-        else:
+        if not jobrun_id:
             search_url =  self.__base_url+':981/edw/jobs'
             self.__log(search_url)
             edw_json = {
@@ -345,12 +354,16 @@ class Conn:
             if self.__has_api_error(search_json):
                 return 0
             jobrun_id = search_json['data'][0]
+
         status_url =  self.__base_url+':981/edw/jobs/'+str(jobrun_id)
+
+        if status_waiting_seconds < 5 or not isinstance(status_waiting_seconds, int):
+            status_waiting_seconds = 5
 
         ready = False
         self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
         while not ready:
-            time.sleep(5)
+            time.sleep(status_waiting_seconds)
             status_json = requests.get(status_url, headers=edw_http_headers).json()
             if self.__has_api_error(status_json):
                 return 0

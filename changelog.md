@@ -1,3 +1,6 @@
+### 0.0.66
+new param status_waiting_seconds for download_edw and download_datamining method
+
 ### 0.0.65
 Optimized download datamining with a lot of data  [datamining_helper](eanalytics_api_py/conn.py)
 
