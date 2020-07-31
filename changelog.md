@@ -1,3 +1,6 @@
+### 0.0.67
+New Conn method [get_view_id_name_map](eanalytics_api_py/conn.py)
+
 ### 0.0.66
 new param status_waiting_seconds for download_edw and download_datamining method
 

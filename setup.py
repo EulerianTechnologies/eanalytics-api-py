@@ -22,7 +22,7 @@ setup(
     name = 'eanalytics_api_py',
     packages = ['eanalytics_api_py'],
     platforms = ['any'],
-    python_requires='>=3',
+    python_requires='>=3.6',
     url = 'https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version = '0.0.66',
+    version = '0.0.67',
 )
