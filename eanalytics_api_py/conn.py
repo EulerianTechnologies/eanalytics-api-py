@@ -505,4 +505,7 @@ class Conn:
         view_name_idx = view_json["data"]["fields"].index({"name" : "view_name"})
         views = { view[view_id_idx] : view[view_name_idx] for view in view_json["data"]["rows"] }
 
+        if "0" not in views:
+            views["0"] = "last channel"
+
         return views

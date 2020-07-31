@@ -1,3 +1,6 @@
+### 0.0.68
+[get_view_id_name_map](eanalytics_api_py/conn.py) Added default view_id=0
+
 ### 0.0.67
 New Conn method [get_view_id_name_map](eanalytics_api_py/conn.py)
 
