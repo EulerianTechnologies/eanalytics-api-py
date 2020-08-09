@@ -19,7 +19,7 @@ setup(
         'requests>=2.23.0',
         'ijson>=3.0.4',
         'pandas>=1.0.3',
-        'ipython'>'=7.16.1',
+        'ipython>=7.16.1'
     ],
     keywords = [
         'eulerian',
