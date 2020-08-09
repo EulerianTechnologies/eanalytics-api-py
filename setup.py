@@ -15,8 +15,23 @@ setup(
     ],
     description = 'Locally download a datamining dataset from the Eulerian Technologies API',
     download_url = 'https://github.com/EulerianTechnologies/eanalytics-api-py/archive/master.zip',
-    install_requires=['requests>=2.23.0', 'ijson>=3.0.4', 'pandas>=1.0.3'],
-    keywords = ['eulerian', 'datamining', 'download', 'dw', 'datawharehouse', 'eanalytics'],
+    install_requires=[
+        'requests>=2.23.0',
+        'ijson>=3.0.4',
+        'pandas>=1.0.3',
+        'ipython'>'=7.16.1',
+    ],
+    keywords = [
+        'eulerian',
+        'datamining',
+        'download',
+        'dw',
+        'datawharehouse',
+        'eanalytics',
+        'jupyter',
+        'notebook',
+        'data science'
+    ],
     long_description=long_description,
     long_description_content_type='text/markdown',
     name = 'eanalytics_api_py',
@@ -24,5 +39,5 @@ setup(
     platforms = ['any'],
     python_requires='>=3.6',
     url = 'https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version = '0.0.68',
+    version = '0.0.69',
 )

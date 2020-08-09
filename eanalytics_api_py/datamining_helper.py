@@ -10,7 +10,7 @@ def deduplicate_product_cols_file_2_df(
     compression='gzip',
     encoding='utf-8',
     language='en',
-    dtype = {}
+    **kwargs
 ):
     """ Deduplicate product params columns
 
@@ -51,9 +51,9 @@ def deduplicate_product_cols_file_2_df(
             Default: 'en'  (fr/es/en)
             Note: Used to detect the product reference column
 
-        dtype : dict, optional
-            Set pandas column dtype to lower memory usage
-            Doc https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
+        **kwargs:
+            Keyword arguments for pd.read_csv function
+
 
     Returns
     -------
@@ -120,7 +120,7 @@ def deduplicate_product_cols_file_2_df(
             quotechar=quotechar,
             encoding=encoding,
             usecols=col_names,
-            dtype=dtype
+            **kwargs,
         )
 
         df.columns = [ re.sub(pattern=regex_prdp, repl="", string=col_name) for col_name in df.columns ]
