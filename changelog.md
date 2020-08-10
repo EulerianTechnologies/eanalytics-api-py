@@ -1,3 +1,6 @@
+### 0.0.70
+Packaging fix
+
 ### 0.0.69
 [New helper method](eanalytics_api_py/jupyter/jupyter_helper.py)
 Jupyter: Add a html button to trigger cell visibility according ot the given tag code
