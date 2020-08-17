@@ -7,6 +7,7 @@ import ijson
 import json
 import csv
 import inspect
+import urllib
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -40,6 +41,7 @@ class Conn:
         self.__print_log = print_log
         self.__http_headers = { "Authorization" : f"Bearer {api_key}" }
         self.__base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
+        self.__api_key = api_key
 
         overview_url = f"{self.__base_url}/ea/v2/er/account/authtree.json"
         overview_json = requests.get(
@@ -164,6 +166,9 @@ class Conn:
             
         if not jobrun_id:
             search_url = f"{self.__base_url}/ea/v2/ea/{website_name}/report/{datamining_type}/search.json"
+            search_url_debug = f"{self.__base_url}/ea/v2/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
+            self.__log(f"DEBUG: http get url {search_url_debug}?{urllib.parse.urlencode(payload)}")
+
             search_json = requests.get(
                 url=search_url,
                 params=payload,

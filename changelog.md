@@ -1,3 +1,6 @@
+### 0.0.71
+log http get request in Conn.download_datamining method
+
 ### 0.0.70
 Packaging fix
 

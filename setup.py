@@ -42,5 +42,5 @@ setup(
     platforms = ['any'],
     python_requires='>=3.6',
     url = 'https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version = '0.0.70',
+    version = '0.0.71',
 )
