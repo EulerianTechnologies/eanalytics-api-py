@@ -28,7 +28,7 @@ pip3 install eanalytics_api_py --upgrade
 
 ```
 from  eanalytics_api_py.conn import Conn
-from  eanalytics_api_py.datamining_helper import deduplicate_product_cols_file_2_df
+from  eanalytics_api_py.datamining_helper import deduplicate_product_cols_file_2_df, csv_files_2_df
 import pandas as pd
 
 language = 'en'
@@ -43,7 +43,7 @@ conn = Conn(
 ### download_datamining method
 
 ```
-path2file = conn.download_datamining(
+a_path2file = conn.download_datamining(
                 website_name = 'demo',
                 datamining_type = 'order',
                 payload = {
@@ -67,7 +67,13 @@ path2file = conn.download_datamining(
 
 # load into pandas dataframe and normalize product columns
 df = deduplicate_product_cols_file_2_df(
-        path2file,
+        a_path2file,
+        language=language
+)
+
+# alternatively load directly without product normalization
+df = csv_files_2_df(
+        a_path2file,
         language=language
 )
 ```

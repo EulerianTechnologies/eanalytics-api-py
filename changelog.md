@@ -1,3 +1,10 @@
+### 0.0.72
+Conn.download_datamining
+- return now an array of files instead of a string
+- deletion of params jobrun_id / output_filename
+- new param n_slice_days (default=31) split query to datamining by slice
+[new csv_files_2_df method](eanalytics_api_py/jupyter/jupyter_helper.py)
+
 ### 0.0.71
 log http get request in Conn.download_datamining method
 
