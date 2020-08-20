@@ -1,3 +1,6 @@
+### 0.0.73
+fix datamining helper
+
 ### 0.0.72
 Conn.download_datamining
 - return now an array of files instead of a string

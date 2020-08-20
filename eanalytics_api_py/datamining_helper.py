@@ -128,6 +128,7 @@ def deduplicate_product_cols_file_2_df(
                 quotechar=quotechar,
                 encoding=encoding,
                 usecols=col_names,
+                index_col=None,
                 **kwargs,
             )
 
