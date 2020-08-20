@@ -43,7 +43,7 @@ conn = Conn(
 ### download_datamining method
 
 ```
-a_path2file = conn.download_datamining(
+l_path2file = conn.download_datamining(
                 website_name = 'demo',
                 datamining_type = 'order',
                 payload = {
@@ -60,21 +60,19 @@ a_path2file = conn.download_datamining(
                     'with-productgroup' : 1,
                     'ea-lg' : language,
                 },
-                output_filename = 'demo_orders.csv.gzip',
                 output_directory = '',
                 override_file=True
 )
 
 # load into pandas dataframe and normalize product columns
 df = deduplicate_product_cols_file_2_df(
-        a_path2file,
+        l_path2file,
         language=language
 )
 
 # alternatively load directly without product normalization
 df = csv_files_2_df(
-        a_path2file,
-        language=language
+        l_path2file,
 )
 ```
 - Use [this doc](https://doc.api.eulerian.com/#tag/Datamining:-sales%2Fpaths%2F~1ea~1%7Bsite%7D~1report~1order~1download.json%2Fget) to customize your payload object: 
