@@ -162,7 +162,7 @@ class Conn:
             output_path2file = os.path.join(output_directory, output_filename)
 
             if self.__skipping_download(output_path2file, override_file):
-                return { "path2file" : output_path2file }
+                return output_path2file
 
             payload['date-from'] = date_from
             payload['date-to'] = date_to
@@ -249,7 +249,7 @@ class Conn:
                 os.remove(output_path2file_temp)
 
             self.__log(f"Output csv path2file={output_path2file}")
-            return { "path2file" : output_path2file }
+            return output_path2file
 
         l_path2file = [] # store each file for n_days_slice
         l_allowed_datamining_types = ["order", "estimate", "isenginerequest", "actionlog", "scart"]
@@ -280,13 +280,13 @@ class Conn:
             output_directory = ""
 
         if self.__create_output_directory(output_directory): # error
-            return 0
+            raise SystemError(f"Error while creating directory={output_directory}")
 
         view_id = int(payload["view-id"]) if "view-id" in payload else 0
 
         while dt_date_from + n_days_slice <= dt_date_to:
             dt_tmp_date_to = dt_date_from + n_days_slice
-            d_output_path2file = download(
+            output_path2file = download(
                 website_name = website_name,
                 datamining_type = datamining_type,
                 payload = payload,
@@ -296,10 +296,7 @@ class Conn:
                 view_id = view_id,
                 date_format = date_format,
             )
-            if "error" in d_output_path2file and d_output_path2file["error"]:
-                return 0
-
-            l_path2file.append(d_output_path2file["path2file"])
+            l_path2file.append(output_path2file)
             dt_date_from += n_days_slice
 
         else:
@@ -307,7 +304,7 @@ class Conn:
                 pass
 
             else: # last slice
-                d_output_path2file = download(
+                output_path2file = download(
                     website_name = website_name,
                     datamining_type = datamining_type,
                     payload = payload,
@@ -317,10 +314,7 @@ class Conn:
                     view_id = view_id,
                     date_format = date_format,
                 )
-                if "error" in d_output_path2file and d_output_path2file["error"]:
-                    return 0
-
-                l_path2file.append(d_output_path2file["path2file"])
+                l_path2file.append(output_path2file)
 
         return l_path2file
 

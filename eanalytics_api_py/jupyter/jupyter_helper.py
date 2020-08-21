@@ -1,43 +1,55 @@
 from IPython.display import HTML
 
-def hide_cells(tag=["code"]):
+def hide_cells(
+    tagname_divclass : dict,
+    force_hide = False
+):
     """ Hide cells matching the given tags
 
         Useful to hide specific cells, while displaying config cells to the end users.
 
-
         Parameters
         ----------
-        tag : str|list, obligatory
-            A string "tag_name1"
-            Or a list ["tag_name1", "tag_name2"]
-            Default: ["code"]
+        tag_name_divclass : a dict as { "tagname" : "divclass" }, mandatory
+            "tag_name": name of the tag to hide
+            "divclass : "input", "output", "input_output"
+    
+
+        force_hide: bool, optional
+            Set to True to hide matching cell when executing the function
+            Default: False
 
     Returns
     -------
     HTML button to toggle cell visibility.
     """
-    if type(tag) == str:
-        tag = [ tag ]
 
-    if type(tag) != list:
-        raise TypeError(f"param tag type allowed=str|list but type={type(tag)} found")
+    force_hide = 1 if force_hide else 0 # javascript compatibility
+    allowed_divclass = ["input", "output", "input_output"]     
+
+    for tag_name, divclass in tagname_divclass.items():
+        if divclass not in allowed_divclass:
+            raise ValueError(f"divclass={divclass} not allowed, use: {', '.join(allowed_divclass)}")
         
     html = HTML(f'<script>\
         hide_code = true;\
         function code_toggle(fromForm=false) {{\
-            if ( !fromForm || typeof(fromForm) === "function" ) {{\
+            if ( ( !fromForm || typeof(fromForm) === "function" ) && ( !{force_hide} ) ) {{\
                 return 0;\
             }}\
             $( "div.input" ).each(function() {{\
                 var divInput = this;\
                 $( this ).find("span.cell-tag").each(function() {{\
-                    if ( {tag}.includes( $( this ).text() ) && fromForm ) {{\
+                    var tagname = $( this ).text();\
+                    if ( tagname in {tagname_divclass}  ) {{\
+                        var divname = {tagname_divclass}[tagname]; \
                         if ( hide_code ) {{\
-                            $( divInput ).hide();\
+                            if ( divname === "input" || divname === "input_output" ) $( divInput ).hide();\
+                            if ( divname === "output" || divname === "input_output" ) $( divInput ).next().hide();\
                         }}\
                         else {{\
-                            $( divInput ).show();\
+                            if ( divname === "input" || divname === "input_output" ) $( divInput ).show() ;\
+                            if ( divname === "output" || divname === "input_output" )$( divInput ).next().show();\
                         }}\
                     }}\
                 }});\

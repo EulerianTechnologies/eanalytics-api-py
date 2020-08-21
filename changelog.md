@@ -1,3 +1,7 @@
+### 0.0.74
+improve [jupyter_helper.hide_cells()](eanalytics_api_py/jupyter/jupyter_helper.py)
+various fix
+
 ### 0.0.73
 fix datamining helper
 
