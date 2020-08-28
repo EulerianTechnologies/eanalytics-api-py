@@ -169,7 +169,7 @@ class Conn:
 
             search_url = f"{self.__base_url}/ea/v2/ea/{website_name}/report/{datamining_type}/search.json"
             search_url_debug = f"{self.__base_url}/ea/v2/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
-            self.__log(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload)}")
+            self.__log(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
 
             search_json = requests.get(
                 url=search_url,
@@ -270,6 +270,8 @@ class Conn:
             raise ValueError("missing parameter=date-from in payload object")
 
         n_days_slice = timedelta(days=n_days_slice)
+        one_day_slice = timedelta(days=1)
+
         dt_date_from = datetime.strptime(date_from, date_format)
         dt_date_to = datetime.strptime(date_to, date_format)
 
@@ -297,10 +299,10 @@ class Conn:
                 date_format = date_format,
             )
             l_path2file.append(output_path2file)
-            dt_date_from += n_days_slice
+            dt_date_from += n_days_slice + one_day_slice
 
         else:
-            if dt_date_from == dt_date_to and len(l_path2file): 
+            if dt_date_from > dt_date_to and len(l_path2file): 
                 pass
 
             else: # last slice

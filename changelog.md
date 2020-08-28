@@ -1,3 +1,7 @@
+### 0.0.75
+fix Conn.download_datamining method day downloaded multiple times
+various fix
+
 ### 0.0.74
 improve [jupyter_helper.hide_cells()](eanalytics_api_py/jupyter/jupyter_helper.py)
 various fix
