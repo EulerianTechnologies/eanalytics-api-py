@@ -1,1 +1,1 @@
-from . jupyter import jupyter_helper
+from .conn import Conn

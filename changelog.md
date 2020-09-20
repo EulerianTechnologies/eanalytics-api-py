@@ -1,3 +1,10 @@
+### 0.0.76
+[different functions to load csv files into dataframe](eanalytics_api_py/eaload)
+[different functions to create widgets and buttons to interect with jupyter ](eanalytics_api_py/eajupyter)
+[get started notebooks](notebooks/)
+now use internal eulerian name as header (more consistent)
+pandas column dtype automatically set in eaload functions
+
 ### 0.0.75
 fix Conn.download_datamining method day downloaded multiple times
 various fix

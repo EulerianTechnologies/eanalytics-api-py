@@ -1,4 +1,7 @@
 **/__pycache__
+**/.ipynb*
 **/*egg-info
 **/dist
 *.sh
+*.json
+*.csv*

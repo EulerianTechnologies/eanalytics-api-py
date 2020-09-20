@@ -9,6 +9,7 @@ import csv
 import inspect
 import urllib
 from datetime import datetime, timedelta
+import re
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -232,10 +233,20 @@ class Conn:
                 csvwriter = csv.writer(csvfile, delimiter=';')
 
                 with open(output_path2file_temp) as f:
+                    columns = []
                     headers_object = ijson.items(f, "data.fields")
                     for headers in headers_object:
-                        csv_headers = [header["header"] for header in headers]
-                        csvwriter.writerow(csv_headers)
+                        # header are too messy to work with, working on internal name
+                        for header in headers:
+                            # prdparam case
+                            if header["name"].startswith('productparam'):
+                                match = re.search(
+                                    pattern = r'\s:\s([\w\W]+?)\s#\s(\d)+$',
+                                    string = header["header"]
+                                )
+                                header["name"] = f'productparam_{match.group(1)}_{match.group(2)}'
+                            columns.append(header["name"])
+                        csvwriter.writerow(columns)
                   
                 with open(output_path2file_temp) as f:
                     rows_object = ijson.items(f, "data.rows")

@@ -1,12 +1,12 @@
-from IPython.display import HTML
+from IPython.display import HTML as _HTML
 
-def hide_cells(
+def button_hide_cells(
     tagname_divclass : dict,
     force_hide = False
 ):
     """ Hide cells matching the given tags
 
-        Useful to hide specific cells, while displaying config cells to the end users.
+        Button to hide specific cells, while displaying config cells to the end users.
 
         Parameters
         ----------
@@ -17,7 +17,7 @@ def hide_cells(
 
         force_hide: bool, optional
             Set to True to hide matching cell when executing the function
-            Default: False
+            Default :False
 
     Returns
     -------
@@ -31,7 +31,7 @@ def hide_cells(
         if divclass not in allowed_divclass:
             raise ValueError(f"divclass={divclass} not allowed, use: {', '.join(allowed_divclass)}")
         
-    html = HTML(f'<script>\
+    html = _HTML(f'<script>\
         hide_code = true;\
         function code_toggle(fromForm=false) {{\
             if ( ( !fromForm || typeof(fromForm) === "function" ) && ( !{force_hide} ) ) {{\
@@ -59,7 +59,7 @@ def hide_cells(
         \
         $( document ).ready(code_toggle);\
         </script>\
-        <form action="javascript:code_toggle(fromForm=true)"><input type="submit" value="Click here to toggle on/off the raw code."></form>'
+        <form action="javascript:code_toggle(fromForm=true)"><input type="submit" value="Code toggle"></form>'
     )
 
     return html

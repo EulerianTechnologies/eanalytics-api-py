@@ -19,7 +19,8 @@ setup(
         'requests>=2.23.0',
         'ijson>=3.0.4',
         'pandas>=1.0.3',
-        'ipython>=7.16.1'
+        'ipython>=7.16.1',
+        'ipywidgets>=7.5.1'
     ],
     keywords = [
         'eulerian',
@@ -37,10 +38,11 @@ setup(
     name = 'eanalytics_api_py',
     packages = [
         'eanalytics_api_py',
-        'eanalytics_api_py.jupyter'
+        'eanalytics_api_py.eajupyter',
+        'eanalytics_api_py.eaload'
     ],
     platforms = ['any'],
     python_requires='>=3.6',
     url = 'https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version = '0.0.75',
+    version = '0.0.76',
 )
