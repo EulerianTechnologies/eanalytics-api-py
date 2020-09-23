@@ -1,3 +1,8 @@
+### 0.0.77
+[new download_realtime_report](eanalytics_api_py/conn.py)
+it is a simple API which will evolve in the feature (waiting for backend)
+[notebook](notebooks/realtime_report.ipynb)
+
 ### 0.0.76
 [different functions to load csv files into dataframe](eanalytics_api_py/eaload)
 [different functions to create widgets and buttons to interect with jupyter ](eanalytics_api_py/eajupyter)

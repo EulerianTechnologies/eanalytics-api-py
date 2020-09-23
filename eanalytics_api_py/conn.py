@@ -10,6 +10,7 @@ import inspect
 import urllib
 from datetime import datetime, timedelta
 import re
+import pandas as pd
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -98,6 +99,65 @@ class Conn:
             pprint(_json)
             return 1
         return 0
+
+    def download_realtime_report(
+            self,
+            website_name: list,
+            report_name: list,
+            payload : dict,
+    ):
+
+        """ Fetch realtime report data into a pandas dataframe
+
+            Parameters
+            ----------
+            website_name : str, mandatory
+                Your targeted website_name in Eulerian Technologies platform
+
+            report_name: str, mandatory
+
+            payload : dict, mandatory
+                The realtime report payload
+
+        Returns
+        -------
+        pd.DataFrame()
+            A pandas dataframe
+        """
+
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be either a string")
+
+        if not isinstance(report_name, str):
+            raise TypeError("report_name should be a string")
+
+        report_url = f"{self.__base_url}/ea/v2/ea/{website_name}/report/realtime/{report_name}.json"
+        payload['ea-switch-datetorow'] = 1
+        payload['ea-enable-datefmt'] = "%s"
+  
+        report_json = requests.get(
+            url=report_url,
+            params=payload,
+            headers=self.__http_headers,
+        ).json()
+
+        if self.__has_api_error(report_json):
+            raise SystemError(f"Error for url={report_url}?{urllib.parse.urlencode(payload)}")
+
+        fields = [ field['name'] for field in report_json['data']['fields'] ]
+        rows =  report_json['data']['rows']
+
+        df = pd.DataFrame(
+            columns=fields,
+            data=rows,
+        )
+
+        df["website"] = website_name
+        df["date"] = pd.to_datetime(df["date"], unit='s')
+        if 'id' in df.columns:
+            df = df.drop('id', axis=1)
+
+        return df
 
     def download_datamining(
             self,
