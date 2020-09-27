@@ -42,6 +42,7 @@ class Conn:
             print_log = True
     ):
         self.__print_log = print_log
+        self.__gridpool_name = gridpool_name
         self.__http_headers = { "Authorization" : f"Bearer {api_key}" }
         self.__base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
         self.__api_key = api_key
@@ -68,15 +69,9 @@ class Conn:
             self.__log(f'Local path2file={output_path2file} will be overridden with new data')
             return 0
 
-    def __create_output_directory(self, output_directory):
-
-        if output_directory and not os.path.exists(output_directory):
-            try:
-                os.mkdir(output_directory)
-            except Exception as e:
-                print(e)
-                return 1
-        return 0
+        else:
+            self.__log(f'path2file={output_path2file} not found, downloading new data')
+            return 0
 
     def __log(self, log):
         """ A simple logging mechanism """
@@ -351,9 +346,8 @@ class Conn:
 
         if not output_directory:
             output_directory = ""
-
-        if self.__create_output_directory(output_directory): # error
-            raise SystemError(f"Error while creating directory={output_directory}")
+        elif not os.path.exists(output_directory):
+            os.mkdir(output_directory)
 
         view_id = int(payload["view-id"]) if "view-id" in payload else 0
 
@@ -396,10 +390,7 @@ class Conn:
             query : str,
             status_waiting_seconds=5,
             ip = None,
-            token_path2file = None,
-            force_token_refresh = False,
-            output_directory = None,
-            output_filename = None,
+            output_path2file = None,
             override_file = False,
             jobrun_id = None,
     ):
@@ -417,18 +408,8 @@ class Conn:
                 Coma separated ip values
                 Default: Automatically fetch your external ip address
 
-            token_path2file: str, optional
-                Path2file where the edw access token will be locally stored
-                Default: current working directory edw_token.json
-
-            force_token_refresh: str, optional
-                Will fetch a new edw access token regardless of the current token validity
-                Default: False
-
-            output_directory : str, optional
-                The local targeted  directory
-
-            output_filename: str, optional
+            output_path2file: str, optional
+                path2file where the data will be stored
                 If not set, the file will be created in the current working directory with a default name
 
             override_file : bool, optional
@@ -444,78 +425,59 @@ class Conn:
             The output_path2file containing the downloaded datamining data
         """
 
-        def save_get_edw_token():
-            token_expiry_epoch = int(time.time()) + 3600 * 11.5
-            edw_token_url = f"{self.__base_url}/ea/v2/er/account/get_dw_session_token.json"
-            payload = { 'ip' : ip }
-            edw_token_json = requests.get(
-                url=edw_token_url,
-                headers=self.__http_headers,
-                params=payload
-            ).json()
-            
-            if self.__has_api_error(edw_token_json):
-                raise SystemError(f"Error for url={edw_token_url}?{urllib.parse.urlencode(payload)}")
+        if not isinstance(query, str):
+            raise TypeError("query should be a string")
 
-            edw_token = edw_token_json["data"]["rows"][0][0]
-            token_json = { "token" : edw_token, "expiry" : token_expiry_epoch, "ip" : ip }
+        epoch_from_to_findall = re.findall(
+            r'{\W+?(\d+)\W+?(\d+)\W+?}',
+            query
+        )      
+        if not epoch_from_to_findall:
+            raise ValueError(f"Could not read epoch_from and epoch_to from query=\n{query}")
 
-            with open(token_path2file, "w") as f:
-                json.dump(token_json, f, ensure_ascii=False, indent=4)
+        readers_findall = re.findall(r'\w+:\w+@[\w_-]+', query)
+        readers = list(
+            map(
+                lambda s: s.replace(':', '_').replace('@', '_'),
+                readers_findall
+            )
+        )
+        if not readers:
+            raise ValueError(f"Could not read READER from query=\n{query}")
 
-            return edw_token
-        
-        def conditional_token_refresh():
-            if force_token_refresh:
-                self.__log("Forcing edw token refresh")
-                return save_get_edw_token()
-
-            if not os.path.exists(token_path2file):
-                self.__log("No Local edw token file detected, fetching a new one")
-                return save_get_edw_token()
-
-            with open(token_path2file) as f:
-                edw_token_json = json.load(f)
-                current_epoch = int(time.time())
-
-                if not all (k in edw_token_json for k in ("token", "expiry", "ip")) \
-                or ip != edw_token_json['ip'] \
-                or int(edw_token_json["expiry"] < int(time.time())):
-                    self.__log("Local edw token no longer valid, fetching a new one")
-                    return save_get_edw_token()
-
-                self.__log(f"Local edw token still valid, loaded from file={token_path2file}")
-                return edw_token_json["token"]
-       
-        if not output_directory:
-            output_directory = ""
-
-        if self.__create_output_directory(output_directory): # error
-            return 0
-
-        if not output_filename:
-            output_filename = f"dw_{int(time.time())}.csv.gz"
-
-        output_path2file = os.path.join(output_directory, output_filename)
-        output_path2file_temp = f"{output_path2file}.temp"
+        if not output_path2file:
+            output_path2file = ''.join([
+                "dw_",
+                self.__gridpool_name+"_",
+                "_".join( epoch_from_to_findall[0]),
+                "_".join(readers)+"_",
+                ".csv.gzip"
+            ])
 
         if self.__skipping_download(output_path2file, override_file):
             return output_path2file
 
-        if  token_path2file:
-            if self.__create_output_directory(os.path.split(token_path2file)[0]): # error
-                return 0
-        else:
-            token_path2file = "edw_token.json"
-
         if not ip:
             self.__log(f"No ip provided\
                 \n Fetching external ip from https://api.ipify.org\
-                \nf using a vpn, please provide the vpn ip\
+                \nif using a vpn, please provide the vpn ip\
             ")
             ip = requests.get(url="https://api.ipify.org").text
 
-        edw_token = conditional_token_refresh()
+        edw_token_url = f"{self.__base_url}/ea/v2/er/account/get_dw_session_token.json"
+        payload = { 'ip' : ip }
+
+        edw_token_json = requests.get(
+            url=edw_token_url,
+            headers=self.__http_headers,
+            params=payload
+        ).json()
+
+        if self.__has_api_error(edw_token_json):
+            raise SystemError(f"Error for url={edw_token_url}?{urllib.parse.urlencode(payload)}")
+
+        edw_token = edw_token_json["data"]["rows"][0][0]
+
         edw_http_headers =  { 
             "Authorization" : f"Bearer {edw_token}",
             "Content-Type" : "application/json"
@@ -525,16 +487,17 @@ class Conn:
             search_url =  f"{self.__base_url}:981/edw/jobs"
             self.__log(search_url)
 
-            edw_json = {
+            edw_json_params = {
                 "kind" : "edw#request",
                 "query" : query
             }
 
             search_json = requests.post(
-                        search_url,
-                        json=edw_json,
-                        headers=edw_http_headers,
+                search_url,
+                json=edw_json_params,
+                headers=edw_http_headers,
             ).json()
+
 
             if self.__has_api_error(search_json):
                 raise SystemError(f"Error for url={search_url}")

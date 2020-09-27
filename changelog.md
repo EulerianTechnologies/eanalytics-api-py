@@ -1,3 +1,7 @@
+### 0.0.78
+changes in [download_edw](eanalytics_api_py/conn.py)
+do not store the edw access token locally anymore
+
 ### 0.0.77
 [new download_realtime_report](eanalytics_api_py/conn.py)
 it is a simple API which will evolve in the feature (waiting for backend)
