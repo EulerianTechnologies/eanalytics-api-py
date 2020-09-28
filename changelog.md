@@ -1,3 +1,6 @@
+### 0.0.79
+fix edw auth token in [download_edw](eanalytics_api_py/conn.py)
+
 ### 0.0.78
 changes in [download_edw](eanalytics_api_py/conn.py)
 do not store the edw access token locally anymore

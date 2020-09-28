@@ -457,6 +457,8 @@ class Conn:
         if self.__skipping_download(output_path2file, override_file):
             return output_path2file
 
+        output_path2file_temp = f"{output_path2file}.tmp"
+
         if not ip:
             self.__log(f"No ip provided\
                 \n Fetching external ip from https://api.ipify.org\
@@ -479,7 +481,7 @@ class Conn:
         edw_token = edw_token_json["data"]["rows"][0][0]
 
         edw_http_headers =  { 
-            "Authorization" : f"Bearer {edw_token}",
+            "Authorization" : "Bearer "+edw_token,
             "Content-Type" : "application/json"
         }
 
@@ -500,6 +502,7 @@ class Conn:
 
 
             if self.__has_api_error(search_json):
+                pprint(edw_json_params)
                 raise SystemError(f"Error for url={search_url}")
 
             jobrun_id = search_json['data'][0]
