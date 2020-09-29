@@ -255,7 +255,6 @@ def deduplicate_product_cols_file_2_df(
 
         for i in range(max(n_products)+1):
             col_names = non_product_cols + list( map( lambda x: x.format(i), product_cols ) )
-
             df = _pd.read_csv(
                 path2file,
                 compression=compression,

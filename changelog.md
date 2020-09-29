@@ -1,3 +1,6 @@
+### 0.0.80
+fix in [eaload.datamining.deduplicate_product_cols_file_2_df](eanalytics_api_py/eaload/datamining.py)
+
 ### 0.0.79
 fix edw auth token in [download_edw](eanalytics_api_py/conn.py)
 

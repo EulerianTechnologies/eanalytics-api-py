@@ -299,7 +299,9 @@ class Conn:
                                     pattern = r'\s:\s([\w\W]+?)\s#\s(\d)+$',
                                     string = header["header"]
                                 )
-                                header["name"] = f'productparam_{match.group(1)}_{match.group(2)}'
+                                prdp_name = match.group(1)
+                                prd_idx = int(match.group(2))-1 # start at 0
+                                header["name"] = f"productparam_{prdp_name}_{prd_idx}"
                             columns.append(header["name"])
                         csvwriter.writerow(columns)
                   
