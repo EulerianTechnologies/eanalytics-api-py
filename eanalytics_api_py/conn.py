@@ -302,6 +302,14 @@ class Conn:
                                 prdp_name = match.group(1)
                                 prd_idx = int(match.group(2))-1 # start at 0
                                 header["name"] = f"productparam_{prdp_name}_{prd_idx}"
+                            # cgip case
+                            if header["name"].startswith('cgiparam'):
+                                match = re.search(
+                                    pattern = r'[\w\W]+?\s:\s(.*)$',
+                                    string = header["header"],
+                                )
+                                cgip_name = match.group(1)
+                                header["name"] = f"cgiparam_{cgip_name}"
                             columns.append(header["name"])
                         csvwriter.writerow(columns)
                   

@@ -80,13 +80,6 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
     """
     if not isinstance(df, _pd.DataFrame):
         raise TypeError("argument should be a pd.DataFrame")
-        
-    # datetime
-    if "order_date_epoch" in df.columns:
-        df["order_date_epoch"] = _pd.to_datetime(df["order_date_epoch"],unit='s')
-
-    if "channel_lvl_date" in df.columns:
-        df["channel_lvl_date"] = _pd.to_datetime(df["channel_lvl_date"],unit='s')
     
     # category
     for col_name in [

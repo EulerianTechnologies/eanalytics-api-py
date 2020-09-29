@@ -1,3 +1,6 @@
+### 0.0.81
+fix[cgiparam download datamining](eanalytics_api_py/conn.py)
+
 ### 0.0.80
 fix in [eaload.datamining.deduplicate_product_cols_file_2_df](eanalytics_api_py/eaload/datamining.py)
 
