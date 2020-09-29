@@ -94,7 +94,7 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
         if col_name in df.columns:
             df[col_name] = df[col_name].astype('category')
             
-    # uint-8
+    # int-16
     for col_name in [
         "a_channel_sz",
         "a_orderproduct_sz",
@@ -103,7 +103,7 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
         "orderproduct_quantity",
     ]:
         if col_name in df.columns:
-            df[col_name] = df[col_name].astype('uint8')
+            df[col_name] = df[col_name].astype('int16')
     
     for col_name in df.columns:
         if col_name.startswith('channel_lvl_p'):
@@ -111,7 +111,7 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
         elif df[col_name].dtype == 'object':
             df[col_name] = df[col_name].astype('category')
         elif df[col_name].dtype == 'int64':
-            df[col_name] = df[col_name].astype('uint32')
+            df[col_name] = df[col_name].astype('int32')
         elif df[col_name].dtype == 'float64':
             df[col_name] = df[col_name].astype('float32')
             

@@ -1,3 +1,6 @@
+### 0.0.82
+uint dtype to int
+
 ### 0.0.81
 fix[cgiparam download datamining](eanalytics_api_py/conn.py)
 
