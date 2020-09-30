@@ -1,3 +1,7 @@
+### 0.0.86
+fix in [eaload/generic.py](eanalytics_api_py/eaload/generic.py)
+streamline view column name
+
 ### 0.0.85
 typo
 

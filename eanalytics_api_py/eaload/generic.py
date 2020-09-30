@@ -77,6 +77,20 @@ def csv_files_2_df(
                 )
                 df_concat[newcol_name] = df_concat[col_name]
 
+    # rename to match new convention
+    else:
+        d_col_rename_map = {}
+        for col_name in df_concat:
+            new_colname = _re.sub(
+                pattern=r"^(viewchannel)_lvl_(.+)$",
+                repl=r"\g<1>_\g<2>",
+                string=col_name
+            )
+            d_col_rename_map[col_name] = new_colname
+        df_concat = df_concat.rename(
+            columns=d_col_rename_map
+        )
+
     return df_concat
 
 def __set_df_col_dtypes( df : _pd.DataFrame() ):
