@@ -1,3 +1,8 @@
+### 0.0.83
+fix in [eaload.datamining](eanalytics_api_py/eaload/datamining.py)
+deduplicate_touchpoints and deduplicate_products can be used with either
+csv or pandas Dataframe
+
 ### 0.0.82
 uint dtype to int
 

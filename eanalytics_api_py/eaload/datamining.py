@@ -1,31 +1,21 @@
 import pandas as _pd
 import gzip as _gzip
 import re as _re
-from .generic import __set_df_col_dtypes
+from .generic import csv_files_2_df, __set_df_col_dtypes
 
-def deduplicate_touchpoints_cols_file_2_df(
-    path2files : list,
+def deduplicate_touchpoints(
+    source : list,
     sep=';',
     quotechar='"',
     compression='gzip',
     encoding='utf-8',
     **kwargs
 ):
-    """ Deduplicate product params columns
-
-        In eulerian datamining, each product related column is duplicated by the number of products.
-        The goal is to perform the following transformation (example):
-            product-color # 1,  product-color # 2, product-color # 3, product-color # 4, product-color # 5,
-        Into
-            product-color
-        
-        This duplicates row for every product and normalize the product param columns.
-        Rows having an empty product ref will be discarded.
+    """ Deduplicate marketing touchpoints
 
         Parameters
         ----------
-        path2files : list, obligatory
-            The targeted list of path2files
+        source : list of path2file OR pandas DataFrame
 
         prdref_colname : str, optional
 
@@ -55,106 +45,62 @@ def deduplicate_touchpoints_cols_file_2_df(
         Pandas dataframe object
     """
 
-    if isinstance(path2files, str):
-        path2files = [ path2files ]
+    if isinstance(source, str):
+        source = [ source ]
 
-    if not isinstance(path2files, list):
-        raise TypeError("path2files should be either a str or a list")
-    
-    channel_colname = "channel_lvl_p0"
-    channel_lvl_regex = r'channel_lvl(\d+)_[\w\W]+'
 
-    l_df = []
-    for path2file in path2files:
-        l_sub_df = []
-        n_touch = set()
-        non_touch_cols = []
-        touch_cols = set()
+    if isinstance(source, list):
+        df = csv_files_2_df(
+            path2files=source,
+            sep=sep,
+            quotechar=quotechar,
+            compression='gzip',
+            encoding=encoding,
+            **kwargs,
+        )
 
-        # get the headers
-        with _gzip.open(path2file, "rt") as f:
-         for line in f:        
-            head = line
-            break
-        
-        for col_name in head.replace('"', "").split(sep):
-            col_name = col_name.strip()
+    elif isinstance(source, _pd.DataFrame):
+        df = source
 
-            if col_name.startswith("channel_lvl"):
-                match = _re.search(
-                    pattern = channel_lvl_regex,
-                    string = col_name
-                )
-                lvl = match.group(1)
-                n_touch.add(int(lvl))
-                touch_cols.add(col_name.replace( # leftmost replace
-                    lvl,
-                    '{}',
-                    1
-                ))
+    else:
+        raise ValueError("source should be a path2file or a pandas DataFrame")
 
-            else:
-                non_touch_cols.append(col_name)
+    columns = []
+    stubnames = []
 
-        if len(n_touch) == 0:
-            raise SystemError(f"No products found\
-                \n Did you add the following parameters in the Conn.download_datamining payload ?\
-                \n 'with-channel-level' : 1,\
-                \n 'with-channel-count' : 1,\
-                \n 'max-channel-level' : 40,\
-                \n max-channel-info' : 9,\
-             ")
-
-        for i in range(max(n_touch)+1):
-            col_names = non_touch_cols + list( map( lambda x: x.format(i), touch_cols ) )
-
-            df = _pd.read_csv(
-                path2file,
-                compression=compression,
-                sep=sep,
-                quotechar=quotechar,
-                encoding=encoding,
-                usecols=col_names,
-                index_col=None,
-                **kwargs,
+    for col_name in df.columns:
+        if col_name.startswith('channel_lvl'):
+            col_name = _re.sub(
+                pattern=r'^(channel)_lvl(\d+)_(.+)$',
+                repl="\g<1>_\g<3>_\g<2>",
+                string=col_name
             )
+            prefix = col_name[:-1]
+            if prefix not in stubnames:
+                stubnames.append(prefix)
+        columns.append(col_name)
 
-            columns = []
-            for col_name in df.columns:
-                if col_name.startswith("channel_lvl"):
-                    match = _re.search(
-                        pattern = channel_lvl_regex,
-                        string = col_name
-                    )
-                    lvl = match.group(1)
-                    col_name = col_name.replace( # leftmost replace
-                        lvl,
-                        '',
-                        1
-                    )
-                columns.append(col_name)
-            df.columns = columns
+    df.columns = columns
+        
+    df = _pd.wide_to_long(
+        df,
+        stubnames=stubnames,
+        i="order_ref",
+        j="channel_position",
+    ).reset_index()
 
-            if channel_colname not in df.columns:
-                raise KeyError(f"channel column={channel_colname} not found")
+    columns = []
+    for col_name in df.columns:
+        if col_name.startswith('channel_') and col_name.endswith('_'):
+            col_name = col_name[:-1]
+        columns.append(col_name)
 
-            # add position
-            df['channel_lvl_position'] = i
+    df.columns = columns
 
-            # discard rows with empty product ref
-            df = df[df[channel_colname] != "-"]
+    return df
 
-            l_sub_df.append(df)
-                                   
-        sub_df = _pd.concat(l_sub_df, axis=0, ignore_index=True)
-        l_df.append(sub_df)
-
-    df_concat = _pd.concat(l_df, axis=0, ignore_index=True)
-    __set_df_col_dtypes(df_concat)
-    return df_concat
-
-def deduplicate_product_cols_file_2_df(
-    path2files : list,
+def deduplicate_products(
+    source : list,
     sep=';',
     quotechar='"',
     compression='gzip',
@@ -174,8 +120,8 @@ def deduplicate_product_cols_file_2_df(
 
         Parameters
         ----------
-        path2files : list, obligatory
-            The targeted list of path2files
+        source : list, obligatory
+            The targeted list of path2files or pandas DataFrame
 
         prdref_colname : str, optional
 
@@ -205,13 +151,29 @@ def deduplicate_product_cols_file_2_df(
         Pandas dataframe object
     """
 
-    if isinstance(path2files, str):
-        path2files = [ path2files ]
+    if isinstance(source, str):
+        source = [ source ]
 
-    if not isinstance(path2files, list):
-        raise TypeError("path2files should be either a str or a list")
-    
-    prdref_colname = "orderproduct_ref"
+    if isinstance(source, list):
+        df = csv_files_2_df(
+            path2files=source,
+            sep=sep,
+            quotechar=quotechar,
+            compression='gzip',
+            encoding=encoding,
+            **kwargs,
+        )
+
+    elif isinstance(source, _pd.DataFrame):
+        df = source
+
+    else:
+        raise ValueError("source should be a path2file or a pandas DataFrame")
+
+
+    stubnames = []
+    columns = []
+
     prd_colnames = [
         "orderproduct_name",
         "orderproduct_quantity",
@@ -219,75 +181,24 @@ def deduplicate_product_cols_file_2_df(
         "orderproduct_sellprice",
         "productgroup_margin",
         "productgroup_name",
-        "productparam" 
+        "productparam_" 
     ]
 
-    l_df = []
-    for path2file in path2files:
-        l_sub_df = []
-        n_products = set()
-        non_product_cols = []
-        product_cols = set()
-
-        # get the headers
-        with _gzip.open(path2file, "rt") as f:
-         for line in f:        
-            head = line
-            break
-        
-        for col_name in head.replace('"', "").split(sep):
-            col_name = col_name.strip()
-
-            if col_name.startswith(tuple(prd_colnames)):
-                n_products.add(int(col_name[-1])) # the idx
-                product_cols.add(col_name[:-1]+'{}') # the rest
-
-            else:
-                non_product_cols.append(col_name)
-
-        if len(n_products) == 0:
-            raise SystemError(f"No products found\
-                \n Did you add the following parameters in the Conn.download_datamining payload ?\
-                \n 'with-orderproduct' : 1,\
-                \n 'with-productparam' : 1,\
-                \n 'with-productgroup' : 1,\
-             ")
-
-        for i in range(max(n_products)+1):
-            col_names = non_product_cols + list( map( lambda x: x.format(i), product_cols ) )
-            df = _pd.read_csv(
-                path2file,
-                compression=compression,
-                sep=sep,
-                quotechar=quotechar,
-                encoding=encoding,
-                usecols=col_names,
-                index_col=None,
-                **kwargs,
-            )
-
-            columns = []
-            for col_name in df.columns:
-                if col_name.startswith(tuple(prd_colnames)):
-                    col_name = col_name[:-2]
-                columns.append(col_name)
-            df.columns = columns
-
-            if prdref_colname not in df.columns:
-                raise KeyError(f"product ref  column={prdref_colname} not found")
-
-            # add position
-            df['product_position'] = i
-
-            # discard rows with empty product ref
-            df = df[df[prdref_colname] != 0]
-            df = df[df[prdref_colname] != "0"]
-
-            l_sub_df.append(df)
-                                   
-        sub_df = _pd.concat(l_sub_df, axis=0, ignore_index=True)
-        l_df.append(sub_df)
-
-    df_concat = _pd.concat(l_df, axis=0, ignore_index=True)
-    __set_df_col_dtypes(df_concat)
-    return df_concat
+    for col_name in df.columns:
+        for prd_col in prd_colnames:
+            if col_name.startswith(prd_col):
+                truncated_value = col_name[:-2]
+                idx = col_name[-1]
+                col_name = truncated_value+idx
+                if truncated_value not in stubnames:
+                    stubnames.append(truncated_value)
+                    
+        columns.append(col_name)  
+    df.columns = columns
+                    
+    return _pd.wide_to_long(
+        df=df,
+        stubnames=stubnames,
+        i="order_ref",
+        j="product_position"
+    ).reset_index()
