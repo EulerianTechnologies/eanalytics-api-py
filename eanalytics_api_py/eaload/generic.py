@@ -69,7 +69,7 @@ def csv_files_2_df(
     # if view-id=0 similuate attrib view col
     if "viewchannel_lvl_p0" not in df_concat.columns:
         for col_name in df_concat:
-            if col_name.startswith("channel_lvl0_p"):
+            if col_name.startswith("channel_lvl0_"):
                 newcol_name = _re.sub(
                     pattern=r"^channel_lvl0_(.+)$",
                     repl=r"viewchannel_\g<1>",
