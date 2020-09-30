@@ -1,3 +1,8 @@
+### 0.0.84
+fix in [eaload/generic.py](eanalytics_api_py/eaload/generic.py)
+with view-id=0, add viewchannel_X to match other views
+
+
 ### 0.0.83
 fix in [eaload.datamining](eanalytics_api_py/eaload/datamining.py)
 deduplicate_touchpoints and deduplicate_products can be used with either

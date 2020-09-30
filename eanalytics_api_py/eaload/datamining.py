@@ -72,7 +72,7 @@ def deduplicate_touchpoints(
         if col_name.startswith('channel_lvl'):
             col_name = _re.sub(
                 pattern=r'^(channel)_lvl(\d+)_(.+)$',
-                repl="\g<1>_\g<3>_\g<2>",
+                repl=r"\g<1>_\g<3>_\g<2>",
                 string=col_name
             )
             prefix = col_name[:-1]
