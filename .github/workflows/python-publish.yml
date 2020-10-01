@@ -26,7 +26,17 @@ jobs:
     - name: Build and publish
       env:
         TWINE_USERNAME: '__token__'
-        TWINE_PASSWORD: ${{ secrets.EANALYTICS_API_PY_PYPI_SECRET }}
+        TWINE_PASSWORD: ${{ secrets.EANALYTICS_API_PY_PUSH }}
       run: |
         python setup.py sdist bdist_wheel
         twine upload dist/*
+
+  mattermost:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+    - name: Mattermost notification
+      uses: distributhor/workflow-webhook@v1
+      env:
+        webhook_url: ${{ secrets.EANALYTICS_API_PY_ACTION_MATTERMOST_DEPLOY_URL_SECRET }}
+        webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
