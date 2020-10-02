@@ -39,4 +39,4 @@ jobs:
       uses: distributhor/workflow-webhook@v1
       env:
         webhook_url: ${{ secrets.EANALYTICS_API_PY_ACTION_MATTERMOST_DEPLOY_URL_SECRET }}
-        webhook_secret: ${{ secrets.WEBHOOK_SECRET }}
+        webhook_secret: ${{ secrets.EANALYTICS_API_PY_PUSH }}

@@ -1,3 +1,7 @@
+### 0.0.89
+deployment workflow mattermost hook secret fix
+notebook typo
+
 ### 0.0.88
 deployment workflow fix
 
