@@ -26,7 +26,7 @@ jobs:
     - name: Build and publish
       env:
         TWINE_USERNAME: '__token__'
-        TWINE_PASSWORD: ${{ secrets.EANALYTICS_API_PY_PUSH }}
+        TWINE_PASSWORD: ${{ secrets.EANALYTICS_API_PY_PYPI_SECRET }}
       run: |
         python setup.py sdist bdist_wheel
         twine upload dist/*

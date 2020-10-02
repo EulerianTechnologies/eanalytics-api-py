@@ -1,3 +1,6 @@
+### 0.0.88
+deployment workflow fix
+
 ### 0.0.87
 [fix](eanalytics_api_py/eaload/datamining.py)
 strip correctly col_name to push into stubnames array
