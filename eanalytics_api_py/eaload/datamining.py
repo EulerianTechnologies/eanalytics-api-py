@@ -75,13 +75,17 @@ def deduplicate_touchpoints(
                 repl=r"\g<1>_\g<3>_\g<2>",
                 string=col_name
             )
-            prefix = col_name[:-1]
+            prefix = _re.sub(
+                pattern=r'^(channel_.+_)(\d+)$',
+                repl=r"\g<1>",
+                string=col_name
+            )
             if prefix not in stubnames:
                 stubnames.append(prefix)
         columns.append(col_name)
 
     df.columns = columns
-        
+
     df = _pd.wide_to_long(
         df,
         stubnames=stubnames,
