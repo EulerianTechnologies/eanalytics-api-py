@@ -2,6 +2,7 @@ import pandas as _pd
 import gzip as _gzip
 import re as _re
 from .generic import csv_files_2_df, __set_df_col_dtypes
+import numpy as np
 
 def deduplicate_touchpoints(
     source : list,
@@ -100,6 +101,7 @@ def deduplicate_touchpoints(
         columns.append(col_name)
 
     df.columns = columns
+    df = df[~df.channel_p0.isin(['-',0,None, '0',np.nan])]
 
     return df
 
@@ -200,9 +202,12 @@ def deduplicate_products(
         columns.append(col_name)  
     df.columns = columns
                     
-    return _pd.wide_to_long(
+    df = _pd.wide_to_long(
         df=df,
         stubnames=stubnames,
         i="order_ref",
         j="product_position"
     ).reset_index()
+    df = df[~df.orderproduct_ref.isin(['-',0,None, '0',np.nan])]
+
+    return df

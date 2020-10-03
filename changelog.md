@@ -1,3 +1,6 @@
+### 0.0.90
+[filtered out rows without products/marketing touches](eanalytics_api_py/eaload/datamining.py)
+
 ### 0.0.89
 deployment workflow mattermost hook secret fix
 notebook typo
