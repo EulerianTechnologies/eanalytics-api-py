@@ -631,3 +631,35 @@ class Conn:
             views["0"] = "last channel"
 
         return views
+
+    def get_website_by_name(
+        self,
+        website_name : str
+    ) -> dict :
+        """ Fetch attribution rules
+
+            Parameters
+            ----------
+            website_name: str, obligatory
+                Your targeted website_name in Eulerian Technologies platform
+
+
+        Returns
+        -------
+        dict
+            A dict as { "website_prop" : "website_prop_value" }
+        """
+
+        website_url = f"{self.__base_url}/ea/v2/ea/{website_name}/db/website/get_me.json"
+        website_json =  requests.get(
+            url=website_url,
+            headers=self.__http_headers
+        ).json()
+
+        if self.__has_api_error(website_json):
+            raise SystemError(f"Error for url={website_url}")
+
+        return  {
+             website_json["data"]["fields"][i]["name"] : website_json["data"]["rows"][0][i]
+                for i in range(len(website_json["data"]["fields"]))
+        }
