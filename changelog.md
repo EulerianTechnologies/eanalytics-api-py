@@ -1,3 +1,6 @@
+### 0.0.93
+fix packaging + update payload
+
 ### 0.0.92
 [wrapper for datamining payload params](eanalytics_api_py/earequest/datamining/payload.py)
 

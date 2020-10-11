@@ -59,7 +59,6 @@ analytics = {
     "with-visitdate" : 1,
     "with-visitlag" : 1,
     "with-cgiparam" : 1,
-    "with-cluster" : 1,
     "with-rebuyer-prevnb" : 1,
     "with-rebuyer-prevamount" : 1,
     "with-rebuyer-prevtm" : 1,
@@ -73,4 +72,9 @@ user = {
     "with-userid" : 1,
     "with-last-rp-ea-android-adid" : 1,
     "with-last-rp-ea-ios-idfa" : 1,
+}
+
+user_info = {
+    "with-cluster" : 1,
+    "with-iduserparam" :1,
 }

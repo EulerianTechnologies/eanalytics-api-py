@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from os import path
 
 this_directory = path.abspath(path.dirname(__file__))
@@ -37,13 +37,9 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     name = 'eanalytics_api_py',
-    packages = [
-        'eanalytics_api_py',
-        'eanalytics_api_py.eajupyter',
-        'eanalytics_api_py.eaload'
-    ],
+    packages = find_packages(),
     platforms = ['any'],
     python_requires='>=3.6',
     url = 'https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version = '0.0.92',
+    version = '0.0.93',
 )
