@@ -1,3 +1,6 @@
+### 0.0.94
+internal optimizations
+
 ### 0.0.93
 fix packaging + update payload
 

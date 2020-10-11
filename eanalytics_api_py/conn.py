@@ -11,6 +11,7 @@ import urllib
 from datetime import datetime, timedelta
 import re
 import pandas as pd
+import functools
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -48,15 +49,11 @@ class Conn:
         self.__api_key = api_key
 
         overview_url = f"{self.__base_url}/ea/v2/er/account/authtree.json"
-        overview_json = requests.get(
+        overview_json = self.__request_to_json(
+            request_type = "get",
             url=overview_url, 
             headers=self.__http_headers
-        ).json()
-
-        if self.__has_api_error(overview_json):
-            raise SystemError(f"Error for url={overview_url}")
-        else:
-            self.__log("Connexion ok")
+        )
 
     def __skipping_download(self, output_path2file, override_file):
         """ Skip download if local file exists and not override_file """
@@ -84,16 +81,57 @@ class Conn:
             log_msg = f"{time.ctime()}:{caller_mod.__name__}:{caller_func}: {log}"
             print(log_msg)
 
-    def __has_api_error(self, _json):
-        """ Check for error in the JSON returned by Eulerian Technologies API """
+    @staticmethod
+    def __request_to_json(
+        request_type,
+        url,
+        headers = {},
+        params={},
+        json_data={}
+    ):
+        """ Make HTTP request and check for error """
+        request_map = {
+            'get' : requests.get,
+            'post' : requests.post
+        }
 
-        if "error" in _json.keys() and _json["error"] \
-        or "success" in _json.keys() and not _json["success"] \
-        or "status" in _json.keys() and _json['status'].lower() == "failed":
-            self.__log("Error from Eulerian Technologies API")
-            pprint(_json)
-            return 1
-        return 0
+        if request_type not in ["get", "post"]:
+            raise ValueError("request_type not allowed")
+
+        if request_type == "get":
+            r = request_map["get"](
+                url=url,
+                headers=headers,
+                params=params
+            )
+
+        elif request_type == "post": 
+            r = request_map["post"](
+                url=url,
+                headers=headers,
+                json=json_data
+            )
+
+        else:
+            raise ValueError("request_type incorrect")
+
+        try:
+            r_json = r.json()
+        except Exception as e:
+            print(r.text)
+            raise(e)
+
+        if "error" in r_json.keys() and r_json["error"] \
+        or "success" in r_json.keys() and not r_json["success"] \
+        or "status" in r_json.keys() and r_json['status'].lower() == "failed":
+
+            print("Error from Eulerian Technologies API")
+            pprint(r_json)
+            params = urllib.parse.urlencode(params) if params else ''
+            raise SystemError(f"Error for url={url}?{params}\
+                json_data={pprint(json_data)}"
+            )
+        return r_json
 
     def download_realtime_report(
             self,
@@ -130,14 +168,12 @@ class Conn:
         payload['ea-switch-datetorow'] = 1
         payload['ea-enable-datefmt'] = "%s"
   
-        report_json = requests.get(
+        report_json = self.__request_to_json(
+            request_type="get",
             url=report_url,
             params=payload,
             headers=self.__http_headers,
-        ).json()
-
-        if self.__has_api_error(report_json):
-            raise SystemError(f"Error for url={report_url}?{urllib.parse.urlencode(payload)}")
+        )
 
         fields = [ field['name'] for field in report_json['data']['fields'] ]
         rows =  report_json['data']['rows']
@@ -227,14 +263,12 @@ class Conn:
             search_url_debug = f"{self.__base_url}/ea/v2/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
             self.__log(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
 
-            search_json = requests.get(
+            search_json = self.__request_to_json(
+                request_type="get",
                 url=search_url,
                 params=payload,
                 headers=self.__http_headers
-            ).json()
-
-            if self.__has_api_error(search_json):
-                raise SystemError(f"Error for url={search_url}?{urllib.parse.urlencode(payload)}")
+            )
 
             jobrun_id = search_json["jobrun_id"]
 
@@ -248,14 +282,12 @@ class Conn:
             while not ready:
                 self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
                 time.sleep(status_waiting_seconds)
-                status_json = requests.get(
+                status_json = self.__request_to_json(
+                    request_type="get",
                     url=status_url,
                     params=status_payload,
                     headers=self.__http_headers
-                ).json()
-
-                if self.__has_api_error(status_json):
-                    raise SystemError(f"Error for url={status_url}?{urllib.parse.urlencode(status_payload)}")
+                )
 
                 if status_json["jobrun_status"] == "COMPLETED":
                     ready = True
@@ -273,7 +305,7 @@ class Conn:
                         stream=True
                 )
                 try:
-                    self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024)} MBs")
+                    self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
                 except Exception as e:
                     self.__log("Could not read Content-Length header")
@@ -479,17 +511,14 @@ class Conn:
         edw_token_url = f"{self.__base_url}/ea/v2/er/account/get_dw_session_token.json"
         payload = { 'ip' : ip }
 
-        edw_token_json = requests.get(
+        edw_token_json = self.__request_to_json(
+            request_type="get",
             url=edw_token_url,
             headers=self.__http_headers,
             params=payload
-        ).json()
-
-        if self.__has_api_error(edw_token_json):
-            raise SystemError(f"Error for url={edw_token_url}?{urllib.parse.urlencode(payload)}")
+        )
 
         edw_token = edw_token_json["data"]["rows"][0][0]
-
         edw_http_headers =  { 
             "Authorization" : "Bearer "+edw_token,
             "Content-Type" : "application/json"
@@ -504,16 +533,12 @@ class Conn:
                 "query" : query
             }
 
-            search_json = requests.post(
-                search_url,
-                json=edw_json_params,
+            search_json = self.__request_to_json(
+                request_type="post",
+                url=search_url,
+                json_data=edw_json_params,
                 headers=edw_http_headers,
-            ).json()
-
-
-            if self.__has_api_error(search_json):
-                pprint(edw_json_params)
-                raise SystemError(f"Error for url={search_url}")
+            )
 
             jobrun_id = search_json['data'][0]
 
@@ -527,13 +552,11 @@ class Conn:
         while not ready:
             self.__log(f"Waiting for jobrun_id={jobrun_id} to complete")
             time.sleep(status_waiting_seconds)
-            status_json = requests.get(
+            status_json = self.__request_to_json(
+                request_type="get",
                 url=status_url,
                 headers=edw_http_headers
-            ).json()
-
-            if self.__has_api_error(status_json):
-                raise SystemError(f"Error for url={status_url}")
+            )
 
             if status_json["status"] == "Done":
                 ready = True
@@ -546,7 +569,7 @@ class Conn:
                     stream=True
             )
             try:
-                self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024)} MBs")
+                self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
             except Exception as e:
                 self.__log("Could not read Content-Length http header in response")
@@ -614,13 +637,11 @@ class Conn:
         """
 
         view_url = f"{self.__base_url}/ea/v2/ea/{website_name}/db/view/get_all_name.json"
-        view_json = requests.get(
+        view_json = self.__request_to_json(
+            request_type="get",
             url=view_url,
             headers=self.__http_headers
-        ).json()
-
-        if self.__has_api_error(view_json):
-            raise SystemError(f"Error for url={view_url}")
+        )
 
         view_id_idx = view_json["data"]["fields"].index({"name" : "view_id"})
         view_name_idx = view_json["data"]["fields"].index({"name" : "view_name"})
@@ -649,13 +670,11 @@ class Conn:
         """
 
         website_url = f"{self.__base_url}/ea/v2/ea/{website_name}/db/website/get_me.json"
-        website_json =  requests.get(
+        website_json =  self.__request_to_json(
+            request_type="get",
             url=website_url,
             headers=self.__http_headers
-        ).json()
-
-        if self.__has_api_error(website_json):
-            raise SystemError(f"Error for url={website_url}")
+        )
 
         return  {
              website_json["data"]["fields"][i]["name"] : website_json["data"]["rows"][0][i]
