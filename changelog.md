@@ -1,3 +1,6 @@
+### 0.0.92
+[wrapper for datamining payload params](eanalytics_api_py/earequest/datamining/payload.py)
+
 ### 0.0.91
 [conn.get_website_by_name](eanalytics_api_py/conn.py)
 

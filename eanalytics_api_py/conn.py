@@ -15,31 +15,31 @@ import pandas as pd
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
 
-        Parameters
-        ----------
-        gridpool_name : str, obligatory
-            Your assigned grid in Eulerian Technologies platform
+    Parameters
+    ----------
+    gridpool_name : str, obligatory
+        Your assigned grid in Eulerian Technologies platform
 
-        datacenter : str, obligatory
-            Your assigned datacenter (com for Europe, ca for Canada) in Eulerian Technologies platform
+    datacenter : str, obligatory
+        Your assigned datacenter (com for Europe, ca for Canada) in Eulerian Technologies platform
 
-        api_key : str, obligatory
-            Your Eulerian Technologies user account API key
+    api_key : str, obligatory
+        Your Eulerian Technologies user account API key
 
-        print_log : bool, optional
-            If set to False, will not print log messages
-            Default: True
+    print_log : bool, optional
+        If set to False, will not print log messages
+        Default: True
 
     Returns
     -------
         Class is instantiated
     """
     def __init__(
-            self,
-            gridpool_name : str,
-            datacenter  : str,
-            api_key : str,
-            print_log = True
+        self,
+        gridpool_name : str,
+        datacenter  : str,
+        api_key : str,
+        print_log = True
     ):
         self.__print_log = print_log
         self.__gridpool_name = gridpool_name
@@ -104,15 +104,15 @@ class Conn:
 
         """ Fetch realtime report data into a pandas dataframe
 
-            Parameters
-            ----------
-            website_name : str, mandatory
-                Your targeted website_name in Eulerian Technologies platform
+        Parameters
+        ----------
+        website_name : str, mandatory
+            Your targeted website_name in Eulerian Technologies platform
 
-            report_name: str, mandatory
+        report_name: str, mandatory
 
-            payload : dict, mandatory
-                The realtime report payload
+        payload : dict, mandatory
+            The realtime report payload
 
         Returns
         -------
@@ -168,30 +168,30 @@ class Conn:
 
         """ Fetch datamining data from the API into a gzip compressed file
 
-            Parameters
-            ----------
-            website_name : str, obligatory
-                Your targeted website_name in Eulerian Technologies platform
+        Parameters
+        ----------
+        website_name : str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
 
-            datamining_type : str, obligatory
-                The targeted datamining (isenginerequest, actionlogorder, scart ,estimate, order)
+        datamining_type : str, obligatory
+            The targeted datamining (isenginerequest, actionlogorder, scart ,estimate, order)
 
-            payload : dict, optional
-                The datamining payload that contains the requested data
+        payload : dict, optional
+            The datamining payload that contains the requested data
 
-            status_waiting_seconds: int, optional
-                Waiting time in seconds between each status query
+        status_waiting_seconds: int, optional
+            Waiting time in seconds between each status query
 
-            output_directory : str, optional
-                The local targeted  directory
+        output_directory : str, optional
+            The local targeted  directory
 
-            override_file : bool, optional
-                If set to True, will override output_path2file (if exists) with the new datamining content
-                Default: False
+        override_file : bool, optional
+            If set to True, will override output_path2file (if exists) with the new datamining content
+            Default: False
 
-            n_days_slice: int, optional
-                Split datamining query into days slice to reduce server load
-                Default: 31
+        n_days_slice: int, optional
+            Split datamining query into days slice to reduce server load
+            Default: 31
 
         Returns
         -------
@@ -406,28 +406,28 @@ class Conn:
     ):
         """ Fetch edw data from the API into a gzip compressed file
 
-            Parameters
-            ----------
-            query: str, obligatory
-                EDW query
+        Parameters
+        ----------
+        query: str, obligatory
+            EDW query
 
-             status_waiting_seconds: int, optional
-                Waiting time in seconds between each status query
+         status_waiting_seconds: int, optional
+            Waiting time in seconds between each status query
 
-            ip: str, optional
-                Coma separated ip values
-                Default: Automatically fetch your external ip address
+        ip: str, optional
+            Coma separated ip values
+            Default: Automatically fetch your external ip address
 
-            output_path2file: str, optional
-                path2file where the data will be stored
-                If not set, the file will be created in the current working directory with a default name
+        output_path2file: str, optional
+            path2file where the data will be stored
+            If not set, the file will be created in the current working directory with a default name
 
-            override_file : bool, optional
-                If set to True, will override output_path2file (if exists) with the new datamining content
-                Default: False
+        override_file : bool, optional
+            If set to True, will override output_path2file (if exists) with the new datamining content
+            Default: False
 
-            jobrun_id : str, optional
-                The jobrun_id to download directly from a previously requested jobrun
+        jobrun_id : str, optional
+            The jobrun_id to download directly from a previously requested jobrun
 
         Returns
         -------
@@ -599,14 +599,13 @@ class Conn:
     def get_view_id_name_map (
         self,
         website_name : str
-    ):
+    ) -> dict:
         """ Fetch attribution rules
 
-            Parameters
-            ----------
-            website_name: str, obligatory
-                Your targeted website_name in Eulerian Technologies platform
-
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
 
         Returns
         -------
@@ -638,11 +637,10 @@ class Conn:
     ) -> dict :
         """ Fetch attribution rules
 
-            Parameters
-            ----------
-            website_name: str, obligatory
-                Your targeted website_name in Eulerian Technologies platform
-
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
 
         Returns
         -------
