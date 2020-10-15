@@ -12,29 +12,29 @@ def csv_files_2_df(
 ):
     """ Load a list of csv files into a pandas dataframe
 
-        Parameters
-        ----------
-        path2files : list, obligatory
-            The targeted list of path2files
+    Parameters
+    ----------
+    path2files : list, obligatory
+        The targeted list of path2files
 
-        sep : str, obligatory
-            The csv sep char
-            Default: ';'
+    sep : str, obligatory
+        The csv sep char
+        Default: ';'
 
-        quotechar : str, optional
-            The csv quote char
-            Default: '"'
+    quotechar : str, optional
+        The csv quote char
+        Default: '"'
 
-        compression : str, optional
-            The file compression algorithm
-            Default: 'gzip'
+    compression : str, optional
+        The file compression algorithm
+        Default: 'gzip'
 
-        encoding: str, optional
-            The file encoding
-            Default: 'utf-8'
+    encoding: str, optional
+        The file encoding
+        Default: 'utf-8'
 
-        **kwargs:
-            Keyword arguments for pd.read_csv function
+    **kwargs:
+        Keyword arguments for pd.read_csv function
 
 
     Returns
@@ -96,9 +96,9 @@ def csv_files_2_df(
 def __set_df_col_dtypes( df : _pd.DataFrame() ):
     """ Load a list of csv files into a pandas dataframe
 
-        Parameters
-        ----------
-        df : pd.DataFrame, obligatory
+    Parameters
+    ----------
+    df : pd.DataFrame, obligatory
 
     Returns
     -------

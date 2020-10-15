@@ -37,9 +37,9 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     name = 'eanalytics_api_py',
-    packages = find_packages(),
+    packages = find_packages(exclude=("tests",)),
     platforms = ['any'],
     python_requires='>=3.6',
     url = 'https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version = '0.0.94',
+    version = '0.0.95',
 )

@@ -46,10 +46,11 @@ class Conn:
         self.__gridpool_name = gridpool_name
         self.__http_headers = { "Authorization" : f"Bearer {api_key}" }
         self.__base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
+        self.__api_v2 = f"{self.__base_url}/ea/v2"
         self.__api_key = api_key
 
-        overview_url = f"{self.__base_url}/ea/v2/er/account/authtree.json"
-        overview_json = self.__request_to_json(
+        overview_url = f"{self.__api_v2}/er/account/authtree.json"
+        self.__request_to_json(
             request_type = "get",
             url=overview_url, 
             headers=self.__http_headers
@@ -164,7 +165,7 @@ class Conn:
         if not isinstance(report_name, str):
             raise TypeError("report_name should be a string")
 
-        report_url = f"{self.__base_url}/ea/v2/ea/{website_name}/report/realtime/{report_name}.json"
+        report_url = f"{self.__api_v2}/ea/{website_name}/report/realtime/{report_name}.json"
         payload['ea-switch-datetorow'] = 1
         payload['ea-enable-datefmt'] = "%s"
   
@@ -259,8 +260,8 @@ class Conn:
             payload['date-from'] = date_from
             payload['date-to'] = date_to
 
-            search_url = f"{self.__base_url}/ea/v2/ea/{website_name}/report/{datamining_type}/search.json"
-            search_url_debug = f"{self.__base_url}/ea/v2/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
+            search_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/search.json"
+            search_url_debug = f"{self.__api_v2}/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
             self.__log(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
 
             search_json = self.__request_to_json(
@@ -272,7 +273,7 @@ class Conn:
 
             jobrun_id = search_json["jobrun_id"]
 
-            status_url =  f"{self.__base_url}/ea/v2/ea/{website_name}/report/{datamining_type}/status.json"
+            status_url =  f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/status.json"
             status_payload = { "jobrun-id" : jobrun_id }
             ready = False
 
@@ -293,7 +294,7 @@ class Conn:
                     ready = True
 
             self.__log('Downloading data')
-            download_url = f"{self.__base_url}/ea/v2/ea/{website_name}/report/{datamining_type}/download.json"
+            download_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/download.json"
             download_payload = { 'output-as-csv' : 0, 'jobrun-id' : jobrun_id }
             output_path2file_temp = f"{output_path2file}.tmp"
 
@@ -508,7 +509,7 @@ class Conn:
             ")
             ip = requests.get(url="https://api.ipify.org").text
 
-        edw_token_url = f"{self.__base_url}/ea/v2/er/account/get_dw_session_token.json"
+        edw_token_url = f"{self.__api_v2}/er/account/get_dw_session_token.json"
         payload = { 'ip' : ip }
 
         edw_token_json = self.__request_to_json(
@@ -636,7 +637,7 @@ class Conn:
             A dict as { "view_id" : "view_name", ...}
         """
 
-        view_url = f"{self.__base_url}/ea/v2/ea/{website_name}/db/view/get_all_name.json"
+        view_url = f"{self.__api_v2}/ea/{website_name}/db/view/get_all_name.json"
         view_json = self.__request_to_json(
             request_type="get",
             url=view_url,
@@ -669,7 +670,7 @@ class Conn:
             A dict as { "website_prop" : "website_prop_value" }
         """
 
-        website_url = f"{self.__base_url}/ea/v2/ea/{website_name}/db/website/get_me.json"
+        website_url = f"{self.__api_v2}/ea/{website_name}/db/website/get_me.json"
         website_json =  self.__request_to_json(
             request_type="get",
             url=website_url,

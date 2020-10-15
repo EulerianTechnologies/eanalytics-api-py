@@ -43,7 +43,7 @@ def deduplicate_touchpoints(
     Returns
     -------
     pd.Dataframe
-        Pandas dataframe object
+        Pandas DataFrame object
     """
 
     if isinstance(source, str):
