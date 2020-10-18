@@ -11,7 +11,6 @@ import urllib
 from datetime import datetime, timedelta
 import re
 import pandas as pd
-import functools
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -40,7 +39,7 @@ class Conn:
         gridpool_name : str,
         datacenter  : str,
         api_key : str,
-        print_log = True
+        print_log : bool = True
     ):
         self.__print_log = print_log
         self.__gridpool_name = gridpool_name
@@ -50,29 +49,82 @@ class Conn:
         self.__api_key = api_key
 
         overview_url = f"{self.__api_v2}/er/account/authtree.json"
+
+        # checking credentials
         self.__request_to_json(
             request_type = "get",
-            url=overview_url, 
+            url=overview_url,
             headers=self.__http_headers
         )
 
-    def __skipping_download(self, output_path2file, override_file):
-        """ Skip download if local file exists and not override_file """
+    def __remove_file(
+        self,
+        path2file : str
+    ) -> None:
+        """ Remove the given path2file
 
-        if os.path.exists(output_path2file) and not override_file:
+        Parameters
+        ----------
+        path2file : str, obligatory
+            The output full path to file
+
+        Returns
+        -------
+            A boolean
+        """
+        if not isinstance(path2file, str):
+            raise TypeError(f"path2file={path2file} should be a str type")
+
+        if os.path.isfile(path2file):
+            self.__log(f"Deleting path2file={path2file}")
+            os.remove(path2file)
+
+    def __is_skippable_request(
+        self,
+        output_path2file : str,
+        override_file : bool
+    ) -> bool :
+        """ Load data from local file is exist and override_file is True
+
+        Parameters
+        ----------
+        output_path2file : str, obligatory
+            The output full path to file
+
+        override_file : bool, obligatory
+            Your assigned datacenter (com for Europe, ca for Canada) in Eulerian Technologies platform
+
+        Returns
+        -------
+            A boolean
+        """
+
+        if os.path.isfile(output_path2file):
+            if override_file:
+                self.__log(f'Local path2file={output_path2file} will be overridden with new data')
+                return 0
+
             self.__log(f'Output_path2file={output_path2file} already exists, skipping download')
             return 1
 
-        elif os.path.exists(output_path2file) and override_file:
-            self.__log(f'Local path2file={output_path2file} will be overridden with new data')
-            return 0
+        self.__log(f'path2file={output_path2file} not found, downloading new data')
+        return 0
 
-        else:
-            self.__log(f'path2file={output_path2file} not found, downloading new data')
-            return 0
+    def __log(
+        self,
+        log : str
+    ) -> None :
+        """ A simple logging mechanism
 
-    def __log(self, log):
-        """ A simple logging mechanism """
+        Parameters
+        ----------
+        log : str, obligatory
+            The log message to display
+
+        Returns
+        -------
+            Nothing, print a log if self.__print_log is True
+        """
 
         if self.__print_log:
             stack = inspect.stack()
@@ -84,20 +136,40 @@ class Conn:
 
     @staticmethod
     def __request_to_json(
-        request_type,
-        url,
-        headers = {},
-        params={},
-        json_data={}
-    ):
-        """ Make HTTP request and check for error """
+        request_type : str,
+        url : str,
+        headers : dict = {},
+        params : dict = {},
+        json_data : dict = {}
+    ) -> dict :
+        """ Make HTTP request and check for error
+
+        Parameters
+        ----------
+        request_type : str, obligatory
+            The type of request : get/post supported at the moment
+
+        headers : dict, optional
+            The dict to use as the request header
+
+        params : dict, optional
+            The dict to use as the request params (requests.get)
+
+        json_data : dict, optional
+            The dict to use as the request json params (requests.post)
+
+        Returns
+        -------
+            Request response loaded as JSON
+        """
         request_map = {
             'get' : requests.get,
             'post' : requests.post
         }
+        allowed_requests_type = ["get", "post"]
 
-        if request_type not in ["get", "post"]:
-            raise ValueError("request_type not allowed")
+        if request_type not in allowed_requests_type:
+            raise ValueError(f"request_type is not in {', '.join(allowed_requests_type)}")
 
         if request_type == "get":
             r = request_map["get"](
@@ -106,37 +178,40 @@ class Conn:
                 params=params
             )
 
-        elif request_type == "post": 
+        elif request_type == "post":
             r = request_map["post"](
                 url=url,
                 headers=headers,
                 json=json_data
             )
 
-        else:
-            raise ValueError("request_type incorrect")
-
+        # if request cannot be converted into JSON
         try:
             r_json = r.json()
+
         except Exception as e:
             print(r.text)
             raise(e)
 
-        if "error" in r_json.keys() and r_json["error"] \
-        or "success" in r_json.keys() and not r_json["success"] \
-        or "status" in r_json.keys() and r_json['status'].lower() == "failed":
+        else:
+            # potential errors from Eulerian Technologies API
+            if "error" in r_json.keys() and r_json["error"] \
+            or "success" in r_json.keys() and not r_json["success"] \
+            or "status" in r_json.keys() and r_json['status'].lower() == "failed":
 
-            print("Error from Eulerian Technologies API")
-            pprint(r_json)
-            params = urllib.parse.urlencode(params) if params else ''
-            raise SystemError(f"Error for url={url}?{params}\
-                json_data={pprint(json_data)}"
-            )
+                http_status_code = r.status_code
+                print(f"Error[{http_status_code}] from Eulerian Technologies API")
+                pprint(r_json)
+                params = urllib.parse.urlencode(params) if params else ''
+                raise SystemError(f"Error for url={url}?{params}\
+                    json_data={pprint(json_data)}"
+                )
+
         return r_json
 
     def download_realtime_report(
             self,
-            website_name: list,
+            website_name: str,
             report_name: list,
             payload : dict,
     ):
@@ -160,15 +235,22 @@ class Conn:
         """
 
         if not isinstance(website_name, str):
-            raise TypeError("website_name should be either a string")
+            raise TypeError("website_name should be a string")
 
         if not isinstance(report_name, str):
             raise TypeError("report_name should be a string")
 
+
+        if not isinstance(payload, dict):
+            raise TypeError("payload should be a dict")
+
+        if not payload:
+            raise ValueError("payload should not be empty")
+
         report_url = f"{self.__api_v2}/ea/{website_name}/report/realtime/{report_name}.json"
-        payload['ea-switch-datetorow'] = 1
-        payload['ea-enable-datefmt'] = "%s"
-  
+        payload['ea-switch-datetorow'] = 1 # include the date in each row
+        payload['ea-enable-datefmt'] = "%s" # format the date as an epoch timestamp
+
         report_json = self.__request_to_json(
             request_type="get",
             url=report_url,
@@ -184,10 +266,8 @@ class Conn:
             data=rows,
         )
 
-        df["website"] = website_name
+        df["website"] = website_name # useful when querying multiple websites will be implemented
         df["date"] = pd.to_datetime(df["date"], unit='s')
-        if 'id' in df.columns:
-            df = df.drop('id', axis=1)
 
         return df
 
@@ -203,7 +283,7 @@ class Conn:
             n_days_slice = 31,
     ):
 
-        """ Fetch datamining data from the API into a gzip compressed file
+        """ Fetch datamining data from the API into a gzip compressed CSV file
 
         Parameters
         ----------
@@ -236,6 +316,7 @@ class Conn:
             A list of path2file
         """
 
+        # inner function
         def download (
             website_name: str,
             datamining_type: str,
@@ -245,7 +326,8 @@ class Conn:
             dt_date_to: timedelta(),
             view_id: int,
             status_waiting_seconds: int,
-        ):
+        ) -> str :
+            """ download locally JSON response from API and convert it into a gzipped CSV file """
             date_from = dt_date_from.strftime(date_format)
             date_to = dt_date_to.strftime(date_format)
             date_from_file = date_from.replace("/", "_")
@@ -254,7 +336,10 @@ class Conn:
             output_filename = f"{website_name}_{datamining_type}_view_{view_id}_from_{date_from_file}_to_{date_to_file}.csv.gz"
             output_path2file = os.path.join(output_directory, output_filename)
 
-            if self.__skipping_download(output_path2file, override_file):
+            if self.__is_skippable_request(
+                output_path2file=output_path2file,
+                override_file=override_file
+            ):
                 return output_path2file
 
             payload['date-from'] = date_from
@@ -277,7 +362,7 @@ class Conn:
             status_payload = { "jobrun-id" : jobrun_id }
             ready = False
 
-            if status_waiting_seconds < 5 or not isinstance(status_waiting_seconds, int):
+            if not isinstance(status_waiting_seconds, int) or status_waiting_seconds < 5:
                 status_waiting_seconds = 5
 
             while not ready:
@@ -298,36 +383,52 @@ class Conn:
             download_payload = { 'output-as-csv' : 0, 'jobrun-id' : jobrun_id }
             output_path2file_temp = f"{output_path2file}.tmp"
 
-            with  open(output_path2file_temp, 'wb') as f:
+            with  open(
+                file=output_path2file_temp,
+                mode='wb'
+            ) as f:
                 r = requests.get(
                         download_url,
                         params = download_payload,
                         headers = self.__http_headers,
                         stream=True
                 )
-                try:
+
+                if "Content-Length" in r.headers:
                     self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
-                except Exception as e:
-                    self.__log("Could not read Content-Length header")
-
+                # stream the response to avoid out of memory error
                 for chunk in r.iter_content(1024 * 1024 * 5): # 5MB
                     f.write(chunk)
 
             self.__log(f"JSON data downloaded into path2file={output_path2file_temp}")
             self.__log("Converting JSON to CSV...")
 
-            with gzip.open(output_path2file, "wt") as csvfile:
-                csvwriter = csv.writer(csvfile, delimiter=';')
+            with gzip.open(
+                filename=output_path2file,
+                mode="wt"
+            ) as csvfile:
 
-                with open(output_path2file_temp) as f:
+                csvwriter = csv.writer(
+                    csvfile,
+                    delimiter=';'
+                )
+
+                # stream JSON file and convert into CSV
+                with open(
+                    file=output_path2file_temp,
+                    mode="rb"
+                ) as f:
+
                     columns = []
                     headers_object = ijson.items(f, "data.fields")
                     for headers in headers_object:
-                        # header are too messy to work with, working on internal name
+                        # working on header.name rather than header.header for consitency
+                        # because the latest is language specific
                         for header in headers:
-                            # prdparam case
-                            if header["name"].startswith('productparam'):
+                            # this allows to recover the name of the product param name
+                            # instead of the id
+                            if header["name"].startswith('productparam_'):
                                 match = re.search(
                                     pattern = r'\s:\s([\w\W]+?)\s#\s(\d)+$',
                                     string = header["header"]
@@ -335,40 +436,62 @@ class Conn:
                                 prdp_name = match.group(1)
                                 prd_idx = int(match.group(2))-1 # start at 0
                                 header["name"] = f"productparam_{prdp_name}_{prd_idx}"
-                            # cgip case
-                            if header["name"].startswith('cgiparam'):
+                            # this allows to recover the name of the cgi param name
+                            # instead of the id
+                            if header["name"].startswith('cgiparam_'):
                                 match = re.search(
-                                    pattern = r'[\w\W]+?\s:\s(.*)$',
+                                    pattern = r'^[\w\W]+?\s:\s(.*)$',
                                     string = header["header"],
                                 )
                                 cgip_name = match.group(1)
                                 header["name"] = f"cgiparam_{cgip_name}"
+                            # this allows to recover the name of the CRM param name
+                            # instead of the id
+                            if header["name"].startswith('iduserparam_'):
+                                match = re.search(
+                                    pattern = r'^[\w\W]+?\s:\s(.*)$',
+                                    string = header["header"],
+                                )
+                                iduserparam_name = match.group(1)
+                                header["name"] = f"iduserparam_{iduserparam_name}"
+                            # this allows to recover the name of the audience name
+                            # instead of the id
+                            if header["name"].startswith('cluster_'):
+                                match = re.search(
+                                    pattern = r'^[\w\W]+?\s:\s(.*)$',
+                                    string = header["header"],
+                                )
+                                cluster_name = match.group(1)
+                                header["name"] = f"cluster_{cluster_name}"
+
                             columns.append(header["name"])
                         csvwriter.writerow(columns)
-                  
-                with open(output_path2file_temp) as f:
+
+                with open(
+                    file=output_path2file_temp,
+                    mode="rb"
+                ) as f:
                     rows_object = ijson.items(f, "data.rows")
                     for rows in rows_object:
                         for row in rows:
                             csvwriter.writerow(row)
 
-            # removing temp file
-            if os.path.exists(output_path2file_temp):
-                self.__log(f"Deleting temp_file={output_path2file_temp}")
-                os.remove(output_path2file_temp)
-
+            # removing temp JSON file
+            self.__remove_file(path2file=output_path2file_temp)
             self.__log(f"Output csv path2file={output_path2file}")
             return output_path2file
+            # end of inner function
 
         l_path2file = [] # store each file for n_days_slice
         l_allowed_datamining_types = ["order", "estimate", "isenginerequest", "actionlog", "scart"]
         date_format = "%m/%d/%Y"
 
         if datamining_type not in l_allowed_datamining_types:
-            raise ValueError(f"datamining_type={datamining_type} not allowed, use one of the following: {', '.join(l_allowed_datamining_types)}")
+            raise ValueError(f"datamining_type={datamining_type} not allowed.\n\
+                            Use one of the following: {', '.join(l_allowed_datamining_types)}")
 
-        if not isinstance(n_days_slice, int):
-            raise TypeError(f"type of 'n_days_slice' expected: 'int' but got: '{type(n_days_slice)}'")
+        if not isinstance(n_days_slice, int) or n_days_slice < 0 :
+            raise TypeError(f"n_days_slice should be a positive integer")
 
         date_from = payload["date-from"] if "date-from" in payload else None
         if not date_from:
@@ -383,6 +506,7 @@ class Conn:
 
         dt_date_from = datetime.strptime(date_from, date_format)
         dt_date_to = datetime.strptime(date_to, date_format)
+        dt_tmp_date_to = dt_date_to
 
         if dt_date_from > dt_date_to:
             raise ValueError("'date-from' cannot occur later than 'date-to'")
@@ -392,10 +516,16 @@ class Conn:
         elif not os.path.exists(output_directory):
             os.mkdir(output_directory)
 
+        # marketing attribution rule id, default to 0
         view_id = int(payload["view-id"]) if "view-id" in payload else 0
 
-        while dt_date_from + n_days_slice <= dt_date_to:
+        # To avoid overloading the API with huge requests
+        # We split the requests into smallers timerantes "n_days_slice"
+        # While tempory date to delta is smaller than requested time to delta
+        while dt_tmp_date_to <= dt_date_to:
             dt_tmp_date_to = dt_date_from + n_days_slice
+            # Cannot request further than dt_date_to
+            dt_tmp_date_to = dt_date_to if dt_tmp_date_to >= dt_date_to else  dt_tmp_date_to
             output_path2file = download(
                 website_name = website_name,
                 datamining_type = datamining_type,
@@ -407,24 +537,13 @@ class Conn:
                 date_format = date_format,
             )
             l_path2file.append(output_path2file)
+
+            # last iteration, we queried up to the requested date
+            if dt_tmp_date_to == dt_date_to:
+                break
+
+            # add one_day_slice to avoid querying the same day twice
             dt_date_from += n_days_slice + one_day_slice
-
-        else:
-            if dt_date_from > dt_date_to and len(l_path2file): 
-                pass
-
-            else: # last slice
-                output_path2file = download(
-                    website_name = website_name,
-                    datamining_type = datamining_type,
-                    payload = payload,
-                    dt_date_from = dt_date_from,
-                    dt_date_to = dt_date_to,
-                    status_waiting_seconds = status_waiting_seconds,
-                    view_id = view_id,
-                    date_format = date_format,
-                )
-                l_path2file.append(output_path2file)
 
         return l_path2file
 
@@ -432,11 +551,11 @@ class Conn:
             self,
             query : str,
             status_waiting_seconds=5,
-            ip = None,
+            ip : str = None,
             output_path2file = None,
             override_file = False,
             jobrun_id = None,
-    ):
+    ) -> str :
         """ Fetch edw data from the API into a gzip compressed file
 
         Parameters
@@ -472,34 +591,39 @@ class Conn:
             raise TypeError("query should be a string")
 
         epoch_from_to_findall = re.findall(
-            r'{\W+?(\d+)\W+?(\d+)\W+?}',
+            r'{\W+?(\d+)\W+?(\d+)\W+?}', # { 1602958590 1602951590 }
             query
-        )      
+        )
         if not epoch_from_to_findall:
             raise ValueError(f"Could not read epoch_from and epoch_to from query=\n{query}")
 
-        readers_findall = re.findall(r'\w+:\w+@[\w_-]+', query)
+        readers_findall = re.findall(r'\w+:\w+@[\w_-]+', query) # ea:pageview@demo-fr
+        if not readers_findall:
+            raise ValueError(f"Could not read READER from query=\n{query}")
+
+        # for valid filename
         readers = list(
             map(
                 lambda s: s.replace(':', '_').replace('@', '_'),
                 readers_findall
             )
         )
-        if not readers:
-            raise ValueError(f"Could not read READER from query=\n{query}")
 
         if not output_path2file:
-            output_path2file = ''.join([
-                "dw_",
-                self.__gridpool_name+"_",
+            output_path2file = '_'.join([
+                "dw",
+                self.__gridpool_name,
                 "_".join( epoch_from_to_findall[0]),
-                "_".join(readers)+"_",
-                ".csv.gzip"
-            ])
+                "_".join(readers),
+            ])+".cvs.gzip"
 
-        if self.__skipping_download(output_path2file, override_file):
-            return output_path2file
+            if self.__is_skippable_request(
+                output_path2file=output_path2file,
+                override_file=override_file
+            ):
+                return output_path2file
 
+        # tmp file to store JSON response before transforming into CSV
         output_path2file_temp = f"{output_path2file}.tmp"
 
         if not ip:
@@ -520,11 +644,12 @@ class Conn:
         )
 
         edw_token = edw_token_json["data"]["rows"][0][0]
-        edw_http_headers =  { 
+        edw_http_headers =  {
             "Authorization" : "Bearer "+edw_token,
             "Content-Type" : "application/json"
         }
 
+        # no jobrun_id provided, we send the query to get one
         if not jobrun_id:
             search_url =  f"{self.__base_url}:981/edw/jobs"
             self.__log(search_url)
@@ -545,7 +670,7 @@ class Conn:
 
         status_url =  f"{self.__base_url}:981/edw/jobs/{jobrun_id}"
 
-        if status_waiting_seconds < 5 or not isinstance(status_waiting_seconds, int):
+        if not isinstance(status_waiting_seconds, int) or status_waiting_seconds < 5:
             status_waiting_seconds = 5
 
         ready = False
@@ -562,18 +687,18 @@ class Conn:
             if status_json["status"] == "Done":
                 ready = True
                 download_url = status_json["data"][1]
-        
-        with open(output_path2file_temp, "wb") as f:
+
+        with open(
+            file=output_path2file_temp,
+            mode="wb"
+        ) as f:
             r = requests.get(
                     download_url,
                     headers = self.__http_headers,
                     stream=True
             )
-            try:
+            if 'Content-Length' in r.headers:
                 self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
-
-            except Exception as e:
-                self.__log("Could not read Content-Length http header in response")
 
             for chunk in r.iter_content(1024*1024*5): # 5MB
                 f.write(chunk)
@@ -581,41 +706,55 @@ class Conn:
         self.__log(f"JSON data downloaded into path2file={output_path2file_temp}")
         self.__log("Converting JSON to CSV...")
 
-        with gzip.open(output_path2file, "wt") as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=';')
+        # Stream tmp json file and build csv file
+        with gzip.open(
+            filename=output_path2file,
+            mode="wt"
+        ) as csvfile:
+            csvwriter = csv.writer(
+                csvfile,
+                delimiter=';'
+            )
 
-            with open(output_path2file_temp) as f:
+            # Get headers
+            with open(
+                file=output_path2file_temp,
+                mode="rb"
+            ) as f:
                 headers_object = ijson.items(f, "headers.schema")
                 for headers in headers_object:
                     csv_headers = [header[1] for header in headers]
                     csvwriter.writerow(csv_headers)
-              
-            with open(output_path2file_temp) as f:
+
+            # Get rows
+            with open(
+                file=output_path2file_temp,
+                mode="rb"
+            ) as f:
                 rows_object = ijson.items(f, "rows")
                 for rows in rows_object:
                     for row in rows:
                         csvwriter.writerow(row)
 
-            # kill job
+            # Try to kill job, non blocking error
             try:
-                with open(output_path2file_temp) as f:
+                with open(
+                    file=output_path2file_temp,
+                    mode="rb"
+                ) as f:
                     uuid_object = ijson.items(f, "headers.uuid")
                     for uuid in uuid_object:
                         cancel_url = f"{search_url}/{uuid}/cancel"
                         requests.post(
                             url=cancel_url,
                             headers=edw_http_headers
-                        ).json()
+                        )
 
             except Exception as e:
                 print(e)
                 print(f"Could not kill the process uuid={uuid}")
 
-        # removing temp file
-        if os.path.exists(output_path2file_temp):
-            self.__log(f"Deleting temp_file={output_path2file_temp}")
-            os.remove(output_path2file_temp)
-
+        self.__remove_file(path2file=output_path2file_temp)
         self.__log(f"Output csv path2file={output_path2file}")
 
         return output_path2file
@@ -657,7 +796,7 @@ class Conn:
         self,
         website_name : str
     ) -> dict :
-        """ Fetch attribution rules
+        """ Fetch website properties
 
         Parameters
         ----------

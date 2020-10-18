@@ -1,9 +1,12 @@
+### 0.0.96
+tests + internal doc/opti
+
 ### 0.0.95
-[extra documentation for datamining payload](eanalytics_api_py/earequest/datamining/payload.py)
-[new transformation module to work on pandas DataFrame](eanalytics_api_py/eatransform)
-[new functions in eajupyter](eanalytics_api_py/eajupyter/html.py)
-- button_hide_input_cells
-- remove_class_output_scroll
+- [extra documentation for datamining payload](eanalytics_api_py/earequest/datamining/payload.py)
+- [new transformation module to work on pandas DataFrame](eanalytics_api_py/eatransform)
+- [new functions in eajupyter](eanalytics_api_py/eajupyter/html.py)
+-  - button_hide_input_cells
+-  - remove_class_output_scroll
 
 ### 0.0.94
 internal optimizations
