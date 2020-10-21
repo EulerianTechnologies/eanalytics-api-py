@@ -1,3 +1,5 @@
+"""Wrapper around ipywidgets for easier manipulation """
+
 import ipywidgets as _widgets
 # https://ipywidgets.readthedocs.io/en/latest/examples/Widget%20List.html
 

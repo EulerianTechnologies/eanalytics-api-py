@@ -1,3 +1,5 @@
+"""This module allows to manipulate a pandas DataFrame"""
+
 import pandas as _pd
 
 def move_columns(

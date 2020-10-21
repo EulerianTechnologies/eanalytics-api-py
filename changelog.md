@@ -1,3 +1,6 @@
+### 0.0.97
+pylint review + tests
+
 ### 0.0.96
 tests + internal doc/opti
 

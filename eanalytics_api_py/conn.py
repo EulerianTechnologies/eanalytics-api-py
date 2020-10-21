@@ -1,16 +1,20 @@
-import requests
+""" This module contains a Conn class to connect and
+retrive data from Eulerian Technologies API
+"""
+
 import os
 import time
 import gzip
-from pprint import pprint
-import ijson
-import json
-import csv
+import re
 import inspect
 import urllib
+from pprint import pprint
+import csv
 from datetime import datetime, timedelta
-import re
+
 import pandas as pd
+import requests
+import ijson
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -48,9 +52,12 @@ class Conn:
         self.__api_v2 = f"{self.__base_url}/ea/v2"
         self.__api_key = api_key
 
+        self.__check_credentials()
+
+    def __check_credentials(self) -> None:
+        """Check credentials validity"""
         overview_url = f"{self.__api_v2}/er/account/authtree.json"
 
-        # checking credentials
         self.__request_to_json(
             request_type = "get",
             url=overview_url,
@@ -92,7 +99,7 @@ class Conn:
             The output full path to file
 
         override_file : bool, obligatory
-            Your assigned datacenter (com for Europe, ca for Canada) in Eulerian Technologies platform
+            Your assigned datacenter (com for Europe, ca for Canada)
 
         Returns
         -------
@@ -138,9 +145,9 @@ class Conn:
     def __request_to_json(
         request_type : str,
         url : str,
-        headers : dict = {},
-        params : dict = {},
-        json_data : dict = {}
+        headers : dict = None,
+        params : dict = None,
+        json_data : dict = None
     ) -> dict :
         """ Make HTTP request and check for error
 
@@ -189,14 +196,13 @@ class Conn:
         try:
             r_json = r.json()
 
-        except Exception as e:
+        except JSONDecodeError as e:
             print(r.text)
-            raise(e)
+            raise e
 
         else:
             # potential errors from Eulerian Technologies API
             if "error" in r_json.keys() and r_json["error"] \
-            or "success" in r_json.keys() and not r_json["success"] \
             or "status" in r_json.keys() and r_json['status'].lower() == "failed":
 
                 http_status_code = r.status_code
@@ -275,8 +281,7 @@ class Conn:
             self,
             website_name: str,
             datamining_type: str,
-            jobrun_id = None,
-            payload = {},
+            payload = None,
             status_waiting_seconds = 5,
             output_directory = None,
             override_file = False,
@@ -303,7 +308,8 @@ class Conn:
             The local targeted  directory
 
         override_file : bool, optional
-            If set to True, will override output_path2file (if exists) with the new datamining content
+            If set to True, will override output_path2file (if exists)
+                with the new datamining content
             Default: False
 
         n_days_slice: int, optional
@@ -324,7 +330,6 @@ class Conn:
             date_format : str,
             dt_date_from: timedelta(),
             dt_date_to: timedelta(),
-            view_id: int,
             status_waiting_seconds: int,
         ) -> str :
             """ download locally JSON response from API and convert it into a gzipped CSV file """
@@ -333,7 +338,16 @@ class Conn:
             date_from_file = date_from.replace("/", "_")
             date_to_file = date_to.replace("/", "_")
 
-            output_filename = f"{website_name}_{datamining_type}_view_{view_id}_from_{date_from_file}_to_{date_to_file}.csv.gz"
+            output_filename = "_".join([
+                website_name,
+                datamining_type,
+                "view",
+                payload["view-id"],
+                "from",
+                date_from_file,
+                "to",
+                date_to_file,
+            ])+".csv.gz"
             output_path2file = os.path.join(output_directory, output_filename)
 
             if self.__is_skippable_request(
@@ -346,7 +360,9 @@ class Conn:
             payload['date-to'] = date_to
 
             search_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/search.json"
+
             search_url_debug = f"{self.__api_v2}/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
+
             self.__log(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
 
             search_json = self.__request_to_json(
@@ -380,6 +396,7 @@ class Conn:
 
             self.__log('Downloading data')
             download_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/download.json"
+
             download_payload = { 'output-as-csv' : 0, 'jobrun-id' : jobrun_id }
             output_path2file_temp = f"{output_path2file}.tmp"
 
@@ -395,7 +412,7 @@ class Conn:
                 )
 
                 if "Content-Length" in r.headers:
-                    self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
+                    self.__log(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
                 # stream the response to avoid out of memory error
                 for chunk in r.iter_content(1024 * 1024 * 5): # 5MB
@@ -491,7 +508,10 @@ class Conn:
                             Use one of the following: {', '.join(l_allowed_datamining_types)}")
 
         if not isinstance(n_days_slice, int) or n_days_slice < 0 :
-            raise TypeError(f"n_days_slice should be a positive integer")
+            raise TypeError("n_days_slice should be a positive integer")
+
+        if not isinstance(payload, dict) or not payload:
+            raise TypeError("payload should be a non-empty dict")
 
         date_from = payload["date-from"] if "date-from" in payload else None
         if not date_from:
@@ -500,6 +520,7 @@ class Conn:
         date_to = payload['date-to'] if 'date-to' in payload else None
         if not date_to:
             raise ValueError("missing parameter=date-from in payload object")
+
 
         n_days_slice = timedelta(days=n_days_slice)
         one_day_slice = timedelta(days=1)
@@ -517,7 +538,21 @@ class Conn:
             os.mkdir(output_directory)
 
         # marketing attribution rule id, default to 0
-        view_id = int(payload["view-id"]) if "view-id" in payload else 0
+        if "view-id" in payload:
+            match = re.match(
+                pattern=r'^[0-9]$',
+                string=payload["view-id"]
+            )
+
+            if match:
+                if not isinstance(payload["view-id"], str):
+                    payload["view-id"] = str(payload["view-id"])
+
+            else:
+                raise ValueError("Incorrect view-id")
+
+        else:
+            payload["view-id"] = "0"
 
         # To avoid overloading the API with huge requests
         # We split the requests into smallers timerantes "n_days_slice"
@@ -533,7 +568,6 @@ class Conn:
                 dt_date_from = dt_date_from,
                 dt_date_to = dt_tmp_date_to,
                 status_waiting_seconds = status_waiting_seconds,
-                view_id = view_id,
                 date_format = date_format,
             )
             l_path2file.append(output_path2file)
@@ -572,10 +606,12 @@ class Conn:
 
         output_path2file: str, optional
             path2file where the data will be stored
-            If not set, the file will be created in the current working directory with a default name
+            If not set, the file will be created in the current
+                working directory with a default name
 
         override_file : bool, optional
-            If set to True, will override output_path2file (if exists) with the new datamining content
+            If set to True, will override output_path2file (if exists)
+                with the new datamining content
             Default: False
 
         jobrun_id : str, optional
@@ -627,7 +663,7 @@ class Conn:
         output_path2file_temp = f"{output_path2file}.tmp"
 
         if not ip:
-            self.__log(f"No ip provided\
+            self.__log("No ip provided\
                 \n Fetching external ip from https://api.ipify.org\
                 \nif using a vpn, please provide the vpn ip\
             ")
@@ -698,7 +734,7 @@ class Conn:
                     stream=True
             )
             if 'Content-Length' in r.headers:
-                self.__log(f"Content-Length is {int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
+                self.__log(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
             for chunk in r.iter_content(1024*1024*5): # 5MB
                 f.write(chunk)
@@ -775,6 +811,8 @@ class Conn:
         dict
             A dict as { "view_id" : "view_name", ...}
         """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
 
         view_url = f"{self.__api_v2}/ea/{website_name}/db/view/get_all_name.json"
         view_json = self.__request_to_json(
@@ -808,6 +846,8 @@ class Conn:
         dict
             A dict as { "website_prop" : "website_prop_value" }
         """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
 
         website_url = f"{self.__api_v2}/ea/{website_name}/db/website/get_me.json"
         website_json =  self.__request_to_json(

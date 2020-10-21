@@ -1,8 +1,12 @@
-import pandas as _pd
-import gzip as _gzip
+""" Load datamining csv file into pandas DataFrame
+Specific transformation available for easier analysis
+"""
+
 import re as _re
-from .generic import csv_files_2_df, __set_df_col_dtypes
+
+import pandas as _pd
 import numpy as np
+from .generic import csv_files_2_df
 
 def deduplicate_touchpoints(
     source : list,
@@ -55,7 +59,7 @@ def deduplicate_touchpoints(
             path2files=source,
             sep=sep,
             quotechar=quotechar,
-            compression='gzip',
+            compression=compression,
             encoding=encoding,
             **kwargs,
         )
@@ -115,40 +119,41 @@ def deduplicate_products(
 ):
     """ Deduplicate product params columns
 
-        In eulerian datamining, each product related column is duplicated by the number of products.
-        The goal is to perform the following transformation (example):
-            product-color # 1,  product-color # 2, product-color # 3, product-color # 4, product-color # 5,
-        Into
-            product-color
-        
-        This duplicates row for every product and normalize the product param columns.
-        Rows having an empty product ref will be discarded.
+    In eulerian datamining, each product related column is duplicated
+    by the number of products.
+    The goal is to perform the following transformation (example):
+        product-color # 1,  product-color # 2, product-color # 3
+    Into
+        product-color
 
-        Parameters
-        ----------
-        source : list, obligatory
-            The targeted list of path2files or pandas DataFrame
+    This duplicates row for every product and normalize the product param columns.
+    Rows having an empty product ref will be discarded.
 
-        prdref_colname : str, optional
+    Parameters
+    ----------
+    source : list, obligatory
+        The targeted list of path2files or pandas DataFrame
 
-        sep : str, obligatory
-            The csv sep char
-            Default: ';'
+    prdref_colname : str, optional
 
-        quotechar : str, optional
-            The csv quote char
-            Default: '"'
+    sep : str, obligatory
+        The csv sep char
+        Default: ';'
 
-        compression : str, optional
-            The file compression algorithm
-            Default: 'gzip'
+    quotechar : str, optional
+        The csv quote char
+        Default: '"'
 
-        encoding: str, optional
-            The file encoding
-            Default: 'utf-8'
+    compression : str, optional
+        The file compression algorithm
+        Default: 'gzip'
 
-        **kwargs:
-            Keyword arguments for pd.read_csv function
+    encoding: str, optional
+        The file encoding
+        Default: 'utf-8'
+
+    **kwargs:
+        Keyword arguments for pd.read_csv function
 
 
     Returns
@@ -165,7 +170,7 @@ def deduplicate_products(
             path2files=source,
             sep=sep,
             quotechar=quotechar,
-            compression='gzip',
+            compression=compression,
             encoding=encoding,
             **kwargs,
         )
@@ -187,7 +192,7 @@ def deduplicate_products(
         "orderproduct_sellprice",
         "productgroup_margin",
         "productgroup_name",
-        "productparam_" 
+        "productparam_"
     ]
 
     for col_name in df.columns:
@@ -198,10 +203,10 @@ def deduplicate_products(
                 col_name = truncated_value+idx
                 if truncated_value not in stubnames:
                     stubnames.append(truncated_value)
-                    
-        columns.append(col_name)  
+
+        columns.append(col_name)
     df.columns = columns
-                    
+
     df = _pd.wide_to_long(
         df=df,
         stubnames=stubnames,

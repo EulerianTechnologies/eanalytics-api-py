@@ -1,6 +1,7 @@
-import pandas as _pd
-import re as _re
+""" Generic load from csv file into pandas DataFrame with transformation """
 
+import re as _re
+import pandas as _pd
 
 def csv_files_2_df(
     path2files : list,
@@ -53,10 +54,10 @@ def csv_files_2_df(
     for path2file in path2files:
         df = _pd.read_csv(
             path2file,
-            sep=';',
-            quotechar='"',
-            compression='gzip',
-            encoding='utf-8',
+            sep=sep,
+            quotechar=quotechar,
+            compression=compression,
+            encoding=encoding,
             index_col=None,
             header=0,
             **kwargs,
@@ -107,10 +108,10 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
     """
     if not isinstance(df, _pd.DataFrame):
         raise TypeError("argument should be a pd.DataFrame")
-    
+
     # category
     for col_name in [
-        "order_status", 
+        "order_status",
         "channel_lvl_via",
         "channel_lvl_profile",
         "ordertype_key",
@@ -120,7 +121,7 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
     ]:
         if col_name in df.columns:
             df[col_name] = df[col_name].astype('category')
-            
+
     # int-16
     for col_name in [
         "a_channel_sz",
@@ -131,7 +132,7 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
     ]:
         if col_name in df.columns:
             df[col_name] = df[col_name].astype('int16')
-    
+
     for col_name in df.columns:
         if col_name.startswith('channel_lvl_p'):
             df[col_name] = df[col_name].astype('category')
@@ -141,5 +142,5 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
             df[col_name] = df[col_name].astype('int32')
         elif df[col_name].dtype == 'float64':
             df[col_name] = df[col_name].astype('float32')
-            
+
     return df

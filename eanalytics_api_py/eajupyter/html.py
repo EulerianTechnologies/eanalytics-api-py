@@ -1,3 +1,5 @@
+"""Interact with Jupyter Notebook HTML code"""
+
 from IPython.display import HTML as _HTML
 
 def button_hide_cells(
@@ -23,11 +25,13 @@ def button_hide_cells(
     -------
     HTML button to toggle cell visibility. To use with the "display" command
     """
+    if not isinstance(tagname_divclass, dict):
+        raise TypeError("tagname_divclass should be a dict")
 
     force_hide = 1 if force_hide else 0 # javascript compatibility
     allowed_divclass = ["input", "output", "input_output"]
 
-    for tag_name, divclass in tagname_divclass.items():
+    for divclass in tagname_divclass.values():
         if divclass not in allowed_divclass:
             raise ValueError(f"divclass={divclass} not allowed, use: {', '.join(allowed_divclass)}")
 

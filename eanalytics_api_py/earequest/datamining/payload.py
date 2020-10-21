@@ -1,3 +1,5 @@
+"""Http params grouped into dicts of category"""
+
 product = {
     "with-orderproduct" : 1, #  purchased products
     "with-productparam" : 1, # purchased products parameters
