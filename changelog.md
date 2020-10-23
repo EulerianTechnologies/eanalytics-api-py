@@ -1,3 +1,6 @@
+### 0.0.99
+bug fix, casting payload['view-id'] to str before regex check
+
 ### 0.0.98
 Implemented a proper logger for Conn class
 

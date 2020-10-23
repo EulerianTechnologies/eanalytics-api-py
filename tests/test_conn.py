@@ -1,6 +1,8 @@
 import os
 from eanalytics_api_py import Conn
 from datetime import date, timedelta
+import pytest
+import re
 
 gridpool_name = os.environ.get("PYTEST_GRIDPOOL_NAME")
 datacenter_name = os.environ.get("PYTEST_DATACENTER_NAME")
@@ -79,12 +81,27 @@ def test_conn_download_datamining():
         override_file=True,
         n_days_slice=2,
     )
-
     assert( isinstance(l_path2file, list) )
     assert( len(l_path2file) == 2 )
     for path2file in l_path2file:
         assert( os.path.isfile(path2file) )
         os.remove(path2file)
+
+
+    payload['view-id'] = 10
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape("view-id should match ^[0-9]$")
+    ):
+        l_path2file = conn.download_datamining(
+            website_name=website_name,
+            datamining_type=datamining_type,
+            payload=payload,
+            override_file=True,
+            n_days_slice=2,
+        )
+
 
 def test_conn_download_edw():
     path2file = conn.download_edw(

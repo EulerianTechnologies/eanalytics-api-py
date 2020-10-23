@@ -574,17 +574,13 @@ class Conn:
 
         # marketing attribution rule id, default to 0
         if "view-id" in payload:
+            payload["view-id"] = str(payload["view-id"])
             match = re.match(
                 pattern=r'^[0-9]$',
                 string=payload["view-id"]
             )
-
-            if match:
-                if not isinstance(payload["view-id"], str):
-                    payload["view-id"] = str(payload["view-id"])
-
-            else:
-                raise ValueError("Incorrect view-id")
+            if not match:
+                raise ValueError("view-id should match ^[0-9]$")
 
         else:
             payload["view-id"] = "0"
