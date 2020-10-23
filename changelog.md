@@ -1,3 +1,6 @@
+### 0.0.98
+Implemented a proper logger for Conn class
+
 ### 0.0.97
 pylint review + tests
 

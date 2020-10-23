@@ -6,15 +6,24 @@ import os
 import time
 import gzip
 import re
-import inspect
 import urllib
-from pprint import pprint
+from pprint import pprint, pformat
 import csv
 from datetime import datetime, timedelta
+import logging
 
 import pandas as pd
 import requests
 import ijson
+
+# logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# stream handler
+ch = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s:%(name)s:%(funcName)s:%(levelname)s: %(message)s')
+ch.setFormatter(formatter)
 
 class Conn:
     """Setup the connexion to Eulerian Technologies API.
@@ -30,9 +39,9 @@ class Conn:
     api_key : str, obligatory
         Your Eulerian Technologies user account API key
 
-    print_log : bool, optional
-        If set to False, will not print log messages
-        Default: True
+    log_level : str, optional
+        Log level accepted values: ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        Default: INFO
 
     Returns
     -------
@@ -43,21 +52,42 @@ class Conn:
         gridpool_name : str,
         datacenter  : str,
         api_key : str,
-        print_log : bool = True
+        log_level : str = "INFO"
     ):
-        self.__print_log = print_log
+        if not isinstance(log_level, str):
+            raise TypeError("log_level should be a string type")
+
+        allowed_log_level = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        log_level = log_level.upper()
+        if log_level not in allowed_log_level:
+            raise ValueError(f"Accepted log_level values= {', '.join(allowed_log_level)}")
+
+        ch.setLevel(log_level)
+        logger.addHandler(ch)
+
+        if not isinstance(gridpool_name, str):
+            raise TypeError("gridpool_name should be a string type")
         self.__gridpool_name = gridpool_name
-        self.__http_headers = { "Authorization" : f"Bearer {api_key}" }
+
+        if not isinstance(datacenter, str):
+            raise TypeError("datacenter should be a string type")
         self.__base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
         self.__api_v2 = f"{self.__base_url}/ea/v2"
+
+        if not isinstance(api_key, str):
+            raise TypeError("api_key should be a string type")
+
         self.__api_key = api_key
+        self.__http_headers = { "Authorization" : f"Bearer {api_key}" }
 
         self.__check_credentials()
+        logger.info("Credentials ok")
 
     def __check_credentials(self) -> None:
         """Check credentials validity"""
         overview_url = f"{self.__api_v2}/er/account/authtree.json"
 
+        # raise an error if API error or fail to load as json
         self.__request_to_json(
             request_type = "get",
             url=overview_url,
@@ -83,7 +113,7 @@ class Conn:
             raise TypeError(f"path2file={path2file} should be a str type")
 
         if os.path.isfile(path2file):
-            self.__log(f"Deleting path2file={path2file}")
+            logger.info(f"Deleting path2file={path2file}")
             os.remove(path2file)
 
     def __is_skippable_request(
@@ -105,41 +135,19 @@ class Conn:
         -------
             A boolean
         """
+        if not isinstance(output_path2file, str):
+            raise TypeError("output_path2file should be a string type")
 
         if os.path.isfile(output_path2file):
             if override_file:
-                self.__log(f'Local path2file={output_path2file} will be overridden with new data')
+                logger.info(f'Local path2file={output_path2file} will be overridden with new data')
                 return 0
 
-            self.__log(f'Output_path2file={output_path2file} already exists, skipping download')
+            logger.info(f'Output_path2file={output_path2file} already exists, skipping download')
             return 1
 
-        self.__log(f'path2file={output_path2file} not found, downloading new data')
+        logger.info(f'path2file={output_path2file} not found, downloading new data')
         return 0
-
-    def __log(
-        self,
-        log : str
-    ) -> None :
-        """ A simple logging mechanism
-
-        Parameters
-        ----------
-        log : str, obligatory
-            The log message to display
-
-        Returns
-        -------
-            Nothing, print a log if self.__print_log is True
-        """
-
-        if self.__print_log:
-            stack = inspect.stack()
-            frame = stack[1]
-            caller_func = frame.function
-            caller_mod = inspect.getmodule(frame[0])
-            log_msg = f"{time.ctime()}:{caller_mod.__name__}:{caller_func}: {log}"
-            print(log_msg)
 
     @staticmethod
     def __request_to_json(
@@ -169,14 +177,38 @@ class Conn:
         -------
             Request response loaded as JSON
         """
+        if not isinstance(request_type, str):
+            raise TypeError("request_type should be a string dtype")
+
+        if not isinstance(url, str):
+            raise TypeError("url should be a string dtype")
+
+        if headers:
+            if not isinstance(headers, dict):
+                raise TypeError("headers should be a dict dtype")
+
+        if params:
+            if not isinstance(params, dict):
+                raise TypeError("params should be a dict dtype")
+
+        if json_data:
+            if not isinstance(json_data, dict):
+                raise TypeError("json_data should be a dict dtype")
+
         request_map = {
             'get' : requests.get,
             'post' : requests.post
         }
+
         allowed_requests_type = ["get", "post"]
 
         if request_type not in allowed_requests_type:
             raise ValueError(f"request_type is not in {', '.join(allowed_requests_type)}")
+
+        params = urllib.parse.urlencode(params) if params else ''
+        logger.debug(f"url={url}?{params}")
+        logger.debug(f"headers=\n{pformat(headers)}")
+        logger.debug(f"json_data=\n{pformat(json_data)}")
 
         if request_type == "get":
             r = request_map["get"](
@@ -196,8 +228,9 @@ class Conn:
         try:
             r_json = r.json()
 
-        except JSONDecodeError as e:
-            print(r.text)
+        # JSONDecodeError is a subclass of ValueError
+        except ValueError as e:
+            logger.critical(f"Could not convert'{r.text}' as json")
             raise e
 
         else:
@@ -205,13 +238,8 @@ class Conn:
             if "error" in r_json.keys() and r_json["error"] \
             or "status" in r_json.keys() and r_json['status'].lower() == "failed":
 
-                http_status_code = r.status_code
-                print(f"Error[{http_status_code}] from Eulerian Technologies API")
-                pprint(r_json)
-                params = urllib.parse.urlencode(params) if params else ''
-                raise SystemError(f"Error for url={url}?{params}\
-                    json_data={pprint(json_data)}"
-                )
+                logger.critical(f"JSON response from the API\n{pformat(r_json)}")
+                raise SystemError(f"Error[{r.status_code}] from Eulerian Technologies API")
 
         return r_json
 
@@ -241,14 +269,14 @@ class Conn:
         """
 
         if not isinstance(website_name, str):
-            raise TypeError("website_name should be a string")
+            raise TypeError("website_name should be a str type")
 
         if not isinstance(report_name, str):
-            raise TypeError("report_name should be a string")
+            raise TypeError("report_name should be a str typoe")
 
 
         if not isinstance(payload, dict):
-            raise TypeError("payload should be a dict")
+            raise TypeError("payload should be a dict typoe")
 
         if not payload:
             raise ValueError("payload should not be empty")
@@ -363,7 +391,7 @@ class Conn:
 
             search_url_debug = f"{self.__api_v2}/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
 
-            self.__log(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
+            logger.info(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
 
             search_json = self.__request_to_json(
                 request_type="get",
@@ -382,7 +410,7 @@ class Conn:
                 status_waiting_seconds = 5
 
             while not ready:
-                self.__log(f'Waiting for jobrun_id={jobrun_id} to complete')
+                logger.info(f'Waiting for jobrun_id={jobrun_id} to complete')
                 time.sleep(status_waiting_seconds)
                 status_json = self.__request_to_json(
                     request_type="get",
@@ -394,7 +422,7 @@ class Conn:
                 if status_json["jobrun_status"] == "COMPLETED":
                     ready = True
 
-            self.__log('Downloading data')
+            logger.info('Downloading data')
             download_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/download.json"
 
             download_payload = { 'output-as-csv' : 0, 'jobrun-id' : jobrun_id }
@@ -412,14 +440,14 @@ class Conn:
                 )
 
                 if "Content-Length" in r.headers:
-                    self.__log(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
+                    logger.info(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
                 # stream the response to avoid out of memory error
                 for chunk in r.iter_content(1024 * 1024 * 5): # 5MB
                     f.write(chunk)
 
-            self.__log(f"JSON data downloaded into path2file={output_path2file_temp}")
-            self.__log("Converting JSON to CSV...")
+            logger.info(f"JSON data downloaded into path2file={output_path2file_temp}")
+            logger.info("Converting JSON to CSV...")
 
             with gzip.open(
                 filename=output_path2file,
@@ -495,13 +523,16 @@ class Conn:
 
             # removing temp JSON file
             self.__remove_file(path2file=output_path2file_temp)
-            self.__log(f"Output csv path2file={output_path2file}")
+            logger.info(f"Output csv path2file={output_path2file}")
             return output_path2file
             # end of inner function
 
         l_path2file = [] # store each file for n_days_slice
         l_allowed_datamining_types = ["order", "estimate", "isenginerequest", "actionlog", "scart"]
         date_format = "%m/%d/%Y"
+
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a str type")
 
         if datamining_type not in l_allowed_datamining_types:
             raise ValueError(f"datamining_type={datamining_type} not allowed.\n\
@@ -512,6 +543,10 @@ class Conn:
 
         if not isinstance(payload, dict) or not payload:
             raise TypeError("payload should be a non-empty dict")
+
+        if output_directory:
+            if not isinstance(output_directory, str):
+                raise TypeError("output_directory should be a str type")
 
         date_from = payload["date-from"] if "date-from" in payload else None
         if not date_from:
@@ -645,7 +680,11 @@ class Conn:
             )
         )
 
-        if not output_path2file:
+        if output_path2file:
+            if not isinstance(output_path2file, str):
+                raise TypeError("output_path2file should be a str type")
+
+        else:
             output_path2file = '_'.join([
                 "dw",
                 self.__gridpool_name,
@@ -662,8 +701,12 @@ class Conn:
         # tmp file to store JSON response before transforming into CSV
         output_path2file_temp = f"{output_path2file}.tmp"
 
-        if not ip:
-            self.__log("No ip provided\
+        if ip:
+            if not isinstance(ip, str):
+                raise ValueError("ip should be a str type")
+
+        else:
+            logger.warning("No ip provided\
                 \n Fetching external ip from https://api.ipify.org\
                 \nif using a vpn, please provide the vpn ip\
             ")
@@ -688,7 +731,6 @@ class Conn:
         # no jobrun_id provided, we send the query to get one
         if not jobrun_id:
             search_url =  f"{self.__base_url}:981/edw/jobs"
-            self.__log(search_url)
 
             edw_json_params = {
                 "kind" : "edw#request",
@@ -712,7 +754,7 @@ class Conn:
         ready = False
 
         while not ready:
-            self.__log(f"Waiting for jobrun_id={jobrun_id} to complete")
+            logger.info(f"Waiting for jobrun_id={jobrun_id} to complete")
             time.sleep(status_waiting_seconds)
             status_json = self.__request_to_json(
                 request_type="get",
@@ -734,13 +776,13 @@ class Conn:
                     stream=True
             )
             if 'Content-Length' in r.headers:
-                self.__log(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
+                logger.info(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
             for chunk in r.iter_content(1024*1024*5): # 5MB
                 f.write(chunk)
 
-        self.__log(f"JSON data downloaded into path2file={output_path2file_temp}")
-        self.__log("Converting JSON to CSV...")
+        logger.info(f"JSON data downloaded into path2file={output_path2file_temp}")
+        logger.info("Converting JSON to CSV")
 
         # Stream tmp json file and build csv file
         with gzip.open(
@@ -787,11 +829,12 @@ class Conn:
                         )
 
             except Exception as e:
+                logger.warning(f"Could not kill the process uuid={uuid}")
                 print(e)
-                print(f"Could not kill the process uuid={uuid}")
+
 
         self.__remove_file(path2file=output_path2file_temp)
-        self.__log(f"Output csv path2file={output_path2file}")
+        logger.info(f"Output csv path2file={output_path2file}")
 
         return output_path2file
 
