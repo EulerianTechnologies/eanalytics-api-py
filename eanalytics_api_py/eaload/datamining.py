@@ -207,6 +207,10 @@ def deduplicate_products(
         columns.append(col_name)
     df.columns = columns
 
+    for stubname in stubnames:
+        if stubname in columns:
+            raise ValueError(f"stubname={stubname} for coulumn={col_name} exists in columns")
+
     df = _pd.wide_to_long(
         df=df,
         stubnames=stubnames,

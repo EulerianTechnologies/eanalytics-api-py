@@ -7,7 +7,6 @@ import time
 import gzip
 import re
 import urllib
-from pprint import pprint, pformat
 import csv
 from datetime import datetime, timedelta
 import logging
@@ -15,6 +14,9 @@ import logging
 import pandas as pd
 import requests
 import ijson
+
+from .internal.os import _is_skippable_request
+from .internal.request import _request_to_json
 
 # logger
 logger = logging.getLogger(__name__)
@@ -80,174 +82,26 @@ class Conn:
         self.__api_key = api_key
         self.__http_headers = { "Authorization" : f"Bearer {api_key}" }
 
-        self.__check_credentials()
+        self._check_credentials()
         logger.info("Credentials ok")
 
-    def __check_credentials(self) -> None:
+    def _check_credentials(self) -> None:
         """Check credentials validity"""
         overview_url = f"{self.__api_v2}/er/account/authtree.json"
 
         # raise an error if API error or fail to load as json
-        self.__request_to_json(
+        _request_to_json(
             request_type = "get",
             url=overview_url,
-            headers=self.__http_headers
+            headers=self.__http_headers,
+            logger=logger
         )
 
-    def __remove_file(
-        self,
-        path2file : str
-    ) -> None:
-        """ Remove the given path2file
-
-        Parameters
-        ----------
-        path2file : str, obligatory
-            The output full path to file
-
-        Returns
-        -------
-            A boolean
-        """
-        if not isinstance(path2file, str):
-            raise TypeError(f"path2file={path2file} should be a str type")
-
-        if os.path.isfile(path2file):
-            logger.info(f"Deleting path2file={path2file}")
-            os.remove(path2file)
-
-    def __is_skippable_request(
-        self,
-        output_path2file : str,
-        override_file : bool
-    ) -> bool :
-        """ Load data from local file is exist and override_file is True
-
-        Parameters
-        ----------
-        output_path2file : str, obligatory
-            The output full path to file
-
-        override_file : bool, obligatory
-            Your assigned datacenter (com for Europe, ca for Canada)
-
-        Returns
-        -------
-            A boolean
-        """
-        if not isinstance(output_path2file, str):
-            raise TypeError("output_path2file should be a string type")
-
-        if os.path.isfile(output_path2file):
-            if override_file:
-                logger.info(f'Local path2file={output_path2file} will be overridden with new data')
-                return 0
-
-            logger.info(f'Output_path2file={output_path2file} already exists, skipping download')
-            return 1
-
-        logger.info(f'path2file={output_path2file} not found, downloading new data')
-        return 0
-
-    @staticmethod
-    def __request_to_json(
-        request_type : str,
-        url : str,
-        headers : dict = None,
-        params : dict = None,
-        json_data : dict = None
-    ) -> dict :
-        """ Make HTTP request and check for error
-
-        Parameters
-        ----------
-        request_type : str, obligatory
-            The type of request : get/post supported at the moment
-
-        headers : dict, optional
-            The dict to use as the request header
-
-        params : dict, optional
-            The dict to use as the request params (requests.get)
-
-        json_data : dict, optional
-            The dict to use as the request json params (requests.post)
-
-        Returns
-        -------
-            Request response loaded as JSON
-        """
-        if not isinstance(request_type, str):
-            raise TypeError("request_type should be a string dtype")
-
-        if not isinstance(url, str):
-            raise TypeError("url should be a string dtype")
-
-        if headers:
-            if not isinstance(headers, dict):
-                raise TypeError("headers should be a dict dtype")
-
-        if params:
-            if not isinstance(params, dict):
-                raise TypeError("params should be a dict dtype")
-
-        if json_data:
-            if not isinstance(json_data, dict):
-                raise TypeError("json_data should be a dict dtype")
-
-        request_map = {
-            'get' : requests.get,
-            'post' : requests.post
-        }
-
-        allowed_requests_type = ["get", "post"]
-
-        if request_type not in allowed_requests_type:
-            raise ValueError(f"request_type is not in {', '.join(allowed_requests_type)}")
-
-        params = urllib.parse.urlencode(params) if params else ''
-        logger.debug(f"url={url}?{params}")
-        logger.debug(f"headers=\n{pformat(headers)}")
-        logger.debug(f"json_data=\n{pformat(json_data)}")
-
-        if request_type == "get":
-            r = request_map["get"](
-                url=url,
-                headers=headers,
-                params=params
-            )
-
-        elif request_type == "post":
-            r = request_map["post"](
-                url=url,
-                headers=headers,
-                json=json_data
-            )
-
-        # if request cannot be converted into JSON
-        try:
-            r_json = r.json()
-
-        # JSONDecodeError is a subclass of ValueError
-        except ValueError as e:
-            logger.critical(f"Could not convert'{r.text}' as json")
-            raise e
-
-        else:
-            # potential errors from Eulerian Technologies API
-            if "error" in r_json.keys() and r_json["error"] \
-            or "status" in r_json.keys() and r_json['status'].lower() == "failed":
-
-                logger.critical(f"JSON response from the API\n{pformat(r_json)}")
-                raise SystemError(f"Error[{r.status_code}] from Eulerian Technologies API")
-
-        return r_json
-
     def download_realtime_report(
-            self,
-            website_name: str,
-            report_name: list,
-            payload : dict,
+        self,
+        website_name: str,
+        report_name: list,
+        payload : dict,
     ):
 
         """ Fetch realtime report data into a pandas dataframe
@@ -285,11 +139,12 @@ class Conn:
         payload['ea-switch-datetorow'] = 1 # include the date in each row
         payload['ea-enable-datefmt'] = "%s" # format the date as an epoch timestamp
 
-        report_json = self.__request_to_json(
+        report_json = _request_to_json(
             request_type="get",
             url=report_url,
             params=payload,
             headers=self.__http_headers,
+            logger=logger
         )
 
         fields = [ field['name'] for field in report_json['data']['fields'] ]
@@ -306,14 +161,14 @@ class Conn:
         return df
 
     def download_datamining(
-            self,
-            website_name: str,
-            datamining_type: str,
-            payload = None,
-            status_waiting_seconds = 5,
-            output_directory = None,
-            override_file = False,
-            n_days_slice = 31,
+        self,
+        website_name: str,
+        datamining_type: str,
+        payload = None,
+        status_waiting_seconds = 5,
+        output_directory = None,
+        override_file = False,
+        n_days_slice = 31,
     ):
 
         """ Fetch datamining data from the API into a gzip compressed CSV file
@@ -378,9 +233,10 @@ class Conn:
             ])+".csv.gz"
             output_path2file = os.path.join(output_directory, output_filename)
 
-            if self.__is_skippable_request(
+            if _is_skippable_request(
                 output_path2file=output_path2file,
-                override_file=override_file
+                override_file=override_file,
+                logger=logger
             ):
                 return output_path2file
 
@@ -388,16 +244,15 @@ class Conn:
             payload['date-to'] = date_to
 
             search_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/search.json"
-
             search_url_debug = f"{self.__api_v2}/{self.__api_key}/ea/{website_name}/report/{datamining_type}/search.json"
+            logger.info(f"search url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
 
-            logger.info(f"http get url {search_url_debug}?{urllib.parse.urlencode(payload, safe='/')}")
-
-            search_json = self.__request_to_json(
+            search_json = _request_to_json(
                 request_type="get",
                 url=search_url,
                 params=payload,
-                headers=self.__http_headers
+                headers=self.__http_headers,
+                logger=logger
             )
 
             jobrun_id = search_json["jobrun_id"]
@@ -412,11 +267,12 @@ class Conn:
             while not ready:
                 logger.info(f'Waiting for jobrun_id={jobrun_id} to complete')
                 time.sleep(status_waiting_seconds)
-                status_json = self.__request_to_json(
+                status_json = _request_to_json(
                     request_type="get",
                     url=status_url,
                     params=status_payload,
-                    headers=self.__http_headers
+                    headers=self.__http_headers,
+                    logger=logger
                 )
 
                 if status_json["jobrun_status"] == "COMPLETED":
@@ -424,30 +280,19 @@ class Conn:
 
             logger.info('Downloading data')
             download_url = f"{self.__api_v2}/ea/{website_name}/report/{datamining_type}/download.json"
-
             download_payload = { 'output-as-csv' : 0, 'jobrun-id' : jobrun_id }
-            output_path2file_temp = f"{output_path2file}.tmp"
 
-            with  open(
-                file=output_path2file_temp,
-                mode='wb'
-            ) as f:
-                r = requests.get(
-                        download_url,
-                        params = download_payload,
-                        headers = self.__http_headers,
-                        stream=True
-                )
+            download_url_debug = f"{self.__api_v2}/{self.__api_key}/ea/{website_name}/report/{datamining_type}/download.json"
+            logger.info(f"download url {download_url_debug}?{urllib.parse.urlencode(download_payload, safe='/')}")
 
-                if "Content-Length" in r.headers:
-                    logger.info(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
-                # stream the response to avoid out of memory error
-                for chunk in r.iter_content(1024 * 1024 * 5): # 5MB
-                    f.write(chunk)
+            req = urllib.request.Request(
+                    url=f"{download_url}?{urllib.parse.urlencode(download_payload)}",
+                    headers = self.__http_headers,
+            )
 
-            logger.info(f"JSON data downloaded into path2file={output_path2file_temp}")
-            logger.info("Converting JSON to CSV...")
+            if req.has_header('Content-Length'):
+                logger.info(f"Content-Length={int(req.get_header('Content-Length'))/(1024*1024):.2f} MBs")
 
             with gzip.open(
                 filename=output_path2file,
@@ -459,70 +304,60 @@ class Conn:
                     delimiter=';'
                 )
 
-                # stream JSON file and convert into CSV
-                with open(
-                    file=output_path2file_temp,
-                    mode="rb"
-                ) as f:
-
+                with urllib.request.urlopen(req) as f:
                     columns = []
-                    headers_object = ijson.items(f, "data.fields")
-                    for headers in headers_object:
-                        # working on header.name rather than header.header for consitency
-                        # because the latest is language specific
-                        for header in headers:
-                            # this allows to recover the name of the product param name
-                            # instead of the id
-                            if header["name"].startswith('productparam_'):
-                                match = re.search(
-                                    pattern = r'\s:\s([\w\W]+?)\s#\s(\d)+$',
-                                    string = header["header"]
-                                )
-                                prdp_name = match.group(1)
-                                prd_idx = int(match.group(2))-1 # start at 0
-                                header["name"] = f"productparam_{prdp_name}_{prd_idx}"
-                            # this allows to recover the name of the cgi param name
-                            # instead of the id
-                            if header["name"].startswith('cgiparam_'):
-                                match = re.search(
-                                    pattern = r'^[\w\W]+?\s:\s(.*)$',
-                                    string = header["header"],
-                                )
-                                cgip_name = match.group(1)
-                                header["name"] = f"cgiparam_{cgip_name}"
-                            # this allows to recover the name of the CRM param name
-                            # instead of the id
-                            if header["name"].startswith('iduserparam_'):
-                                match = re.search(
-                                    pattern = r'^[\w\W]+?\s:\s(.*)$',
-                                    string = header["header"],
-                                )
-                                iduserparam_name = match.group(1)
-                                header["name"] = f"iduserparam_{iduserparam_name}"
-                            # this allows to recover the name of the audience name
-                            # instead of the id
-                            if header["name"].startswith('cluster_'):
-                                match = re.search(
-                                    pattern = r'^[\w\W]+?\s:\s(.*)$',
-                                    string = header["header"],
-                                )
-                                cluster_name = match.group(1)
-                                header["name"] = f"cluster_{cluster_name}"
+                    objects = ijson.items(f, "data.fields.item") #.item is for ijson
+                    headers = (header for header in objects)
+                    # working on header.name rather than header.header for consitency
+                    # because the latest is language specific
+                    for header in headers:
+                        # this allows to recover the name of the product param name
+                        # instead of the id
+                        if header["name"].startswith('productparam_'):
+                            match = re.search(
+                                pattern = r'\s:\s([\w\W]+?)\s#\s(\d+)$',
+                                string = header["header"]
+                            )
+                            prdp_name = match.group(1)
+                            prd_idx = int(match.group(2))-1 # start at 0
+                            header["name"] = f"productparam_{prdp_name}_{prd_idx}"
+                        # this allows to recover the name of the cgi param name
+                        # instead of the id
+                        if header["name"].startswith('cgiparam_'):
+                            match = re.search(
+                                pattern = r'^[\w\W]+?\s:\s(.*)$',
+                                string = header["header"],
+                            )
+                            cgip_name = match.group(1)
+                            header["name"] = f"cgiparam_{cgip_name}"
+                        # this allows to recover the name of the CRM param name
+                        # instead of the id
+                        if header["name"].startswith('iduserparam_'):
+                            match = re.search(
+                                pattern = r'^[\w\W]+?\s:\s(.*)$',
+                                string = header["header"],
+                            )
+                            iduserparam_name = match.group(1)
+                            header["name"] = f"iduserparam_{iduserparam_name}"
+                        # this allows to recover the name of the audience name
+                        # instead of the id
+                        if header["name"].startswith('cluster_'):
+                            match = re.search(
+                                pattern = r'^[\w\W]+?\s:\s(.*)$',
+                                string = header["header"],
+                            )
+                            cluster_name = match.group(1)
+                            header["name"] = f"cluster_{cluster_name}"
 
-                            columns.append(header["name"])
-                        csvwriter.writerow(columns)
+                        columns.append(header["name"])
+                    csvwriter.writerow(columns)
 
-                with open(
-                    file=output_path2file_temp,
-                    mode="rb"
-                ) as f:
-                    rows_object = ijson.items(f, "data.rows")
-                    for rows in rows_object:
-                        for row in rows:
-                            csvwriter.writerow(row)
+                with urllib.request.urlopen(req) as f:
+                    objects = ijson.items(f, "data.rows.item") # .item is for ijson
+                    rows = (row for row in objects)
+                    for row in rows:
+                        csvwriter.writerow(row)
 
-            # removing temp JSON file
-            self.__remove_file(path2file=output_path2file_temp)
             logger.info(f"Output csv path2file={output_path2file}")
             return output_path2file
             # end of inner function
@@ -613,13 +448,13 @@ class Conn:
         return l_path2file
 
     def download_edw(
-            self,
-            query : str,
-            status_waiting_seconds=5,
-            ip : str = None,
-            output_path2file = None,
-            override_file = False,
-            jobrun_id = None,
+        self,
+        query : str,
+        status_waiting_seconds=5,
+        ip : str = None,
+        output_path2file = None,
+        override_file = False,
+        jobrun_id = None,
     ) -> str :
         """ Fetch edw data from the API into a gzip compressed file
 
@@ -653,7 +488,6 @@ class Conn:
         str
             The output_path2file containing the downloaded datamining data
         """
-
         if not isinstance(query, str):
             raise TypeError("query should be a string")
 
@@ -688,14 +522,12 @@ class Conn:
                 "_".join(readers),
             ])+".cvs.gzip"
 
-            if self.__is_skippable_request(
+            if _is_skippable_request(
                 output_path2file=output_path2file,
-                override_file=override_file
+                override_file=override_file,
+                logger=logger
             ):
                 return output_path2file
-
-        # tmp file to store JSON response before transforming into CSV
-        output_path2file_temp = f"{output_path2file}.tmp"
 
         if ip:
             if not isinstance(ip, str):
@@ -711,11 +543,12 @@ class Conn:
         edw_token_url = f"{self.__api_v2}/er/account/get_dw_session_token.json"
         payload = { 'ip' : ip }
 
-        edw_token_json = self.__request_to_json(
+        edw_token_json = _request_to_json(
             request_type="get",
             url=edw_token_url,
             headers=self.__http_headers,
-            params=payload
+            params=payload,
+            logger=logger
         )
 
         edw_token = edw_token_json["data"]["rows"][0][0]
@@ -733,11 +566,12 @@ class Conn:
                 "query" : query
             }
 
-            search_json = self.__request_to_json(
+            search_json = _request_to_json(
                 request_type="post",
                 url=search_url,
                 json_data=edw_json_params,
                 headers=edw_http_headers,
+                logger=logger
             )
 
             jobrun_id = search_json['data'][0]
@@ -752,84 +586,67 @@ class Conn:
         while not ready:
             logger.info(f"Waiting for jobrun_id={jobrun_id} to complete")
             time.sleep(status_waiting_seconds)
-            status_json = self.__request_to_json(
+            status_json = _request_to_json(
                 request_type="get",
                 url=status_url,
-                headers=edw_http_headers
+                headers=edw_http_headers,
+                logger=logger
             )
 
             if status_json["status"] == "Done":
                 ready = True
                 download_url = status_json["data"][1]
 
-        with open(
-            file=output_path2file_temp,
-            mode="wb"
-        ) as f:
-            r = requests.get(
-                    download_url,
-                    headers = self.__http_headers,
-                    stream=True
-            )
-            if 'Content-Length' in r.headers:
-                logger.info(f"Content-Length={int(r.headers['Content-Length'])/(1024*1024):.2f} MBs")
 
-            for chunk in r.iter_content(1024*1024*5): # 5MB
-                f.write(chunk)
+        req = urllib.request.Request(
+            url=download_url,
+            headers = self.__http_headers,
+        )
 
-        logger.info(f"JSON data downloaded into path2file={output_path2file_temp}")
-        logger.info("Converting JSON to CSV")
+
+        if req.has_header('Content-Length'):
+            logger.info(f"Content-Length={int(req.get_header('Content-Length'))/(1024*1024):.2f} MBs")
 
         # Stream tmp json file and build csv file
         with gzip.open(
             filename=output_path2file,
             mode="wt"
         ) as csvfile:
+
             csvwriter = csv.writer(
                 csvfile,
                 delimiter=';'
             )
 
-            # Get headers
-            with open(
-                file=output_path2file_temp,
-                mode="rb"
-            ) as f:
-                headers_object = ijson.items(f, "headers.schema")
-                for headers in headers_object:
-                    csv_headers = [header[1] for header in headers]
-                    csvwriter.writerow(csv_headers)
+            columns = []
+            with urllib.request.urlopen(req) as f:
+                objects = ijson.items(f, "headers.schema.item")
+                headers = (header for header in objects)
+                for header in headers:
+                    columns.append(header[1])
+                csvwriter.writerow(columns)
 
-            # Get rows
-            with open(
-                file=output_path2file_temp,
-                mode="rb"
-            ) as f:
-                rows_object = ijson.items(f, "rows")
-                for rows in rows_object:
-                    for row in rows:
-                        csvwriter.writerow(row)
+            with urllib.request.urlopen(req) as f:
+                objects = ijson.items(f, "rows.item")
+                rows = (row for row in objects)
+                for row in rows:
+                    csvwriter.writerow(row)
 
-            # Try to kill job, non blocking error
-            try:
-                with open(
-                    file=output_path2file_temp,
-                    mode="rb"
-                ) as f:
-                    uuid_object = ijson.items(f, "headers.uuid")
-                    for uuid in uuid_object:
-                        cancel_url = f"{search_url}/{uuid}/cancel"
-                        requests.post(
-                            url=cancel_url,
-                            headers=edw_http_headers
-                        )
+        # Try to kill job, non blocking error
+        with urllib.request.urlopen(req) as f:
+            objects = ijson.items(f, "headers.uuid.item")
+            uuids = (uuid for uuid in objects)
+            for uuid in uuids:
+                cancel_url = f"{search_url}/{uuid}/cancel"
+                try:
+                    requests.post(
+                        url=cancel_url,
+                        headers=edw_http_headers
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not kill the process uuid={uuid}\n\
+                                    exception:{e}")
 
-            except Exception as e:
-                logger.warning(f"Could not kill the process uuid={uuid}")
-                print(e)
-
-
-        self.__remove_file(path2file=output_path2file_temp)
         logger.info(f"Output csv path2file={output_path2file}")
 
         return output_path2file
@@ -854,10 +671,11 @@ class Conn:
             raise TypeError("website_name should be a string")
 
         view_url = f"{self.__api_v2}/ea/{website_name}/db/view/get_all_name.json"
-        view_json = self.__request_to_json(
+        view_json = _request_to_json(
             request_type="get",
             url=view_url,
-            headers=self.__http_headers
+            headers=self.__http_headers,
+            logger=logger
         )
 
         view_id_idx = view_json["data"]["fields"].index({"name" : "view_id"})
@@ -889,10 +707,11 @@ class Conn:
             raise TypeError("website_name should be a string")
 
         website_url = f"{self.__api_v2}/ea/{website_name}/db/website/get_me.json"
-        website_json =  self.__request_to_json(
+        website_json =  _request_to_json(
             request_type="get",
             url=website_url,
-            headers=self.__http_headers
+            headers=self.__http_headers,
+            logger=logger
         )
 
         return  {

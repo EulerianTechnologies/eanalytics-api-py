@@ -1,3 +1,7 @@
+### 0.1.0
+- more unit testing
+- cleaned up the Conn class
+
 ### 0.0.99
 bug fix, casting payload['view-id'] to str before regex check
 
