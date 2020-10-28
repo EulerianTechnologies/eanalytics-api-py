@@ -137,8 +137,14 @@ class Test_eaload():
     def test_is_df_dedup_touch(self):
         assert( isinstance(df_dedup_touch, pd.DataFrame) )
 
+    def test_cols_df_dedup_touch(self):
+        assert ( any(not col_name.endswith("_") for col_name in df_dedup_touch) )
+
     def test_is_df_dedup_prod(self):
         assert( isinstance(df_dedup_prod, pd.DataFrame) )
+
+    def test_cols_df_dedup_prod(self):
+        assert ( any(not col_name.endswith("_") for col_name in df_dedup_prod) )
 
     def test_remove_l_path2file(self):
         for path2file in l_path2file:

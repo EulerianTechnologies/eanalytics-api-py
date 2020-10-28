@@ -195,21 +195,24 @@ def deduplicate_products(
         "productparam_"
     ]
 
+    columns = []
+
+    # orderproduct_name_i
     for col_name in df.columns:
         for prd_col in prd_colnames:
             if col_name.startswith(prd_col):
-                truncated_value = col_name[:-2]
-                idx = col_name[-1]
-                col_name = truncated_value+idx
-                if truncated_value not in stubnames:
-                    stubnames.append(truncated_value)
-
+                l_col_name = col_name.split("_")
+                stubname = "_".join(l_col_name[:-1]) # orderproduct_name
+                idx = l_col_name[-1] # i
+                col_name = stubname+idx #orderproduct_namei
+                if stubname not in stubnames:
+                    stubnames.append(stubname)
         columns.append(col_name)
     df.columns = columns
 
     for stubname in stubnames:
         if stubname in columns:
-            raise ValueError(f"stubname={stubname} for coulumn={col_name} exists in columns")
+            raise ValueError(f"stubname={stubname} should not equal to a column name")
 
     df = _pd.wide_to_long(
         df=df,

@@ -1,3 +1,6 @@
+### 0.1.1
+- fixed bug in datamining.deduplicate_products where stubnames were not generated correctly
+
 ### 0.1.0
 - more unit testing
 - cleaned up the Conn class
