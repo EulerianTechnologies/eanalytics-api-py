@@ -64,7 +64,7 @@ conn = Conn(
     gridpool_name=gridpool_name,
     datacenter=datacenter_name,
     api_key=api_token,
-    log_level="DEBUG"
+    print_log=print_log
 )
 
 view_id_name_map = conn.get_view_id_name_map(

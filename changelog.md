@@ -1,3 +1,7 @@
+### 0.1.2
+- created module for Conn class
+- Conn class methods into separate files
+
 ### 0.1.1
 - fixed bug in datamining.deduplicate_products where stubnames were not generated correctly
 
@@ -34,7 +38,7 @@ fix packaging + update payload
 [wrapper for datamining payload params](eanalytics_api_py/earequest/datamining/payload.py)
 
 ### 0.0.91
-[conn.get_website_by_name](eanalytics_api_py/conn.py)
+[conn.get_website_by_name](eanalytics_api_py/conn/__init__.py)
 
 ### 0.0.90
 [filtered out rows without products/marketing touches](eanalytics_api_py/eaload/datamining.py)
@@ -71,27 +75,27 @@ csv or pandas Dataframe
 uint dtype to int
 
 ### 0.0.81
-fix[cgiparam download datamining](eanalytics_api_py/conn.py)
+fix[cgiparam download datamining](eanalytics_api_py/conn/__init__.py)
 
 ### 0.0.80
 fix in [eaload.datamining.deduplicate_product_cols_file_2_df](eanalytics_api_py/eaload/datamining.py)
 
 ### 0.0.79
-fix edw auth token in [download_edw](eanalytics_api_py/conn.py)
+fix edw auth token in [download_edw](eanalytics_api_py/conn/__init__.py)
 
 ### 0.0.78
-changes in [download_edw](eanalytics_api_py/conn.py)
+changes in [download_edw](eanalytics_api_py/conn/__init__.py)
 do not store the edw access token locally anymore
 
 ### 0.0.77
-[new download_realtime_report](eanalytics_api_py/conn.py)
+[new download_realtime_report](eanalytics_api_py/conn/__init__.py)
 it is a simple API which will evolve in the feature (waiting for backend)
 [notebook](notebooks/realtime_report.ipynb)
 
 ### 0.0.76
 [different functions to load csv files into dataframe](eanalytics_api_py/eaload)
 [different functions to create widgets and buttons to interect with jupyter ](eanalytics_api_py/eajupyter)
-[get started notebooks](notebooks/)
+[get started notebooks](notebooks)
 now use internal eulerian name as header (more consistent)
 pandas column dtype automatically set in eaload functions
 
@@ -100,7 +104,7 @@ fix Conn.download_datamining method day downloaded multiple times
 various fix
 
 ### 0.0.74
-improve [jupyter_helper.hide_cells()](eanalytics_api_py/jupyter/jupyter_helper.py)
+improve [jupyter_helper.hide_cells()](eanalytics_api_py/eajupyter/jupyter_helper.py)
 various fix
 
 ### 0.0.73
@@ -128,16 +132,16 @@ jupyter_helper.hide_cells(tag=["code"])
 ```
 
 ### 0.0.68
-[get_view_id_name_map](eanalytics_api_py/conn.py) Added default view_id=0
+[get_view_id_name_map](eanalytics_api_py/conn/__init__.py) Added default view_id=0
 
 ### 0.0.67
-New Conn method [get_view_id_name_map](eanalytics_api_py/conn.py)
+New Conn method [get_view_id_name_map](eanalytics_api_py/conn/__init__.py)
 
 ### 0.0.66
 new param status_waiting_seconds for download_edw and download_datamining method
 
 ### 0.0.65
-Optimized download datamining with a lot of data  [datamining_helper](eanalytics_api_py/conn.py)
+Optimized download datamining with a lot of data  [datamining_helper](eanalytics_api_py/conn/__init__.py)
 
 ### 0.0.64
 Fix indexing issue in [datamining_helper](eanalytics_api_py/datamining_helper.py)

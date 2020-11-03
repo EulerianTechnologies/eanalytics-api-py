@@ -7,7 +7,6 @@ def move_columns(
     colname_idx : dict,
     inplace : bool = False,
 ) -> _pd.DataFrame:
-
     """ For a given DataFrame, move given column_name keys into the given index values
 
     Parameters
@@ -61,3 +60,22 @@ def move_columns(
         )
 
         return df
+
+def query_string_to_column(
+    df : _pd.DataFrame,
+    col_name : list,
+    n_decode : int =  0,
+) -> _pd.DataFrame:
+    """ For a given DataFrame, move given column_name keys into the given index values
+
+    Parameters
+    ----------
+    df : pd.DataFrame, mandatory
+
+    col_name: list, mandatory
+       The columns in which to retrieve the query strings
+
+    Returns
+    -------
+    pf.DataFrame with updated columns
+    """
