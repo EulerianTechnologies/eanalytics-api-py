@@ -62,9 +62,12 @@ def _to_json(
         "post": requests.post
     }
 
+    api_key = headers["Authorization"].split(" ")[1]
+    log_url = url.replace("/ea/v2/", f"/ea/v2/{api_key}/")
+
     params = urllib.parse.urlencode(params, safe='/') if params else ''
     _log(
-        log=f"url={url}?{params}",
+        log=f"url={log_url}?{params}",
         print_log=print_log
     )
 

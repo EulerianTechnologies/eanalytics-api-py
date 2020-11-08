@@ -73,6 +73,7 @@ class Conn:
     from ._download_datamining import download_datamining
     from ._download_edw import download_edw
     from ._download_realtime_report import download_realtime_report
+    from ._download_flat_realtime_report import download_flat_realtime_report, _get_all_paths, _all_paths_to_df
 
     @property
     def _creds_hex_digest(self) -> str:
@@ -182,11 +183,144 @@ class Conn:
         website_json = _request._to_json(
             request_type="get",
             url=website_url,
+            params={"output-as-kv": 1},
+            headers=self._http_headers,
+            print_log=self._print_log
+        )
+
+        d_website = website_json["data"]["rows"][0]
+        if not isinstance(d_website, dict):
+            raise TypeError(f"d_website={d_website} should be a dict dtype")
+        return d_website
+
+    def get_mdevicetype_id_name_map(
+            self,
+            website_name: str,
+    ) -> dict:
+        """ Fetch id and name properties of mdevicetype class
+
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
+
+        Returns
+        -------
+        dict
+            A dict as { "mdevicetype_id" : "mdevicetype_name" }
+        """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
+
+        mdevicetype_url = f"{self._api_v2}/ea/{website_name}/db/mdevicetype/getall.json"
+        _json = _request._to_json(
+            request_type="get",
+            url=mdevicetype_url,
+            params={"output-as-kv": 1},
             headers=self._http_headers,
             print_log=self._print_log
         )
 
         return {
-            website_json["data"]["fields"][i]["name"]: website_json["data"]["rows"][0][i]
-            for i in range(len(website_json["data"]["fields"]))
+            _json["data"]["rows"][i]["mdevicetype_id"]: _json["data"]["rows"][i]["mdevicetype_name"]
+            for i in range(len(_json["data"]["rows"]))
+        }
+
+    def get_ordertype_id_name_map(
+            self,
+            website_name: str,
+    ) -> dict:
+        """ Fetch id and name properties of the ordertype class
+
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
+
+        Returns
+        -------
+        dict
+            A dict as { "ordertype_id" : "ordertype_name" }
+        """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
+
+        ordertype_url = f"{self._api_v2}/ea/{website_name}/db/ordertype/searchvisible.json"
+        _json = _request._to_json(
+            request_type="get",
+            url=ordertype_url,
+            params={"limit": 500, "output-as-kv": 1},
+            headers=self._http_headers,
+            print_log=self._print_log
+        )
+
+        return {
+            _json["data"]["rows"][i]["ordertype_id"]: _json["data"]["rows"][i]["ordertype_key"]
+            for i in range(len(_json["data"]["rows"]))
+        }
+
+    def get_ordertypecustom_id_name_map(
+            self,
+            website_name: str,
+    ) -> dict:
+        """ Fetch id and name properties of the ordertypecustom class
+
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
+
+        Returns
+        -------
+        dict
+            A dict as { "ordertypecustom_id" : "ordertypecustom_name" }
+        """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
+
+        ordertypecustom_url = f"{self._api_v2}/ea/{website_name}/db/ordertypecustom/searchvisible.json"
+        _json = _request._to_json(
+            request_type="get",
+            url=ordertypecustom_url,
+            params={"limit": 100, "output-as-kv": 1},
+            headers=self._http_headers,
+            print_log=self._print_log
+        )
+
+        return {
+            _json["data"]["rows"][i]["ordertypecustom_id"]: _json["data"]["rows"][i]["ordertypecustom_name"]
+            for i in range(len(_json["data"]["rows"]))
+        }
+
+    def get_profile_id_name_map(
+            self,
+            website_name: str,
+    ) -> dict:
+        """ Fetch id and name properties of the profile class
+
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
+
+        Returns
+        -------
+        dict
+            A dict as { "profile_id" : "profile_name" }
+        """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
+
+        profile_url = f"{self._api_v2}/ea/{website_name}/db/profile/search.json"
+        _json = _request._to_json(
+            request_type="get",
+            url=profile_url,
+            params={"limit": 100, "output-as-kv": 1},
+            headers=self._http_headers,
+            print_log=self._print_log
+        )
+
+        return {
+            _json["data"]["rows"][i]["profile_id"]: _json["data"]["rows"][i]["profile_name"]
+            for i in range(len(_json["data"]["rows"]))
         }

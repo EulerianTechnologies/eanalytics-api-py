@@ -1,3 +1,7 @@
+### 0.1.30
+- new Conn method [flat_download_realtime_report](eanalytics_api_py/conn/_download_flat_realtime_report.py)
+- [see notebook](notebooks/flat_realtime_report.ipynb)
+
 ### 0.1.2
 - created module for Conn class
 - Conn class methods into separate files
@@ -94,7 +98,7 @@ it is a simple API which will evolve in the feature (waiting for backend)
 
 ### 0.0.76
 [different functions to load csv files into dataframe](eanalytics_api_py/eaload)
-[different functions to create widgets and buttons to interect with jupyter ](eanalytics_api_py/eajupyter)
+[different functions to create widgets and buttons to interact with jupyter ](eanalytics_api_py/eajupyter)
 [get started notebooks](notebooks)
 now use internal eulerian name as header (more consistent)
 pandas column dtype automatically set in eaload functions
