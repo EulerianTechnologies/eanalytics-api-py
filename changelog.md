@@ -1,3 +1,7 @@
+### 0.1.31
+- new Conn method [flat_download_overview_realtime_report](eanalytics_api_py/conn/_download_flat_overview_realtime_report.py)
+- [see notebook](notebooks/flat_overview_realtime_report.ipynb)
+
 ### 0.1.30
 - new Conn method [flat_download_realtime_report](eanalytics_api_py/conn/_download_flat_realtime_report.py)
 - [see notebook](notebooks/flat_realtime_report.ipynb)

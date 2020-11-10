@@ -74,6 +74,7 @@ class Conn:
     from ._download_edw import download_edw
     from ._download_realtime_report import download_realtime_report
     from ._download_flat_realtime_report import download_flat_realtime_report, _get_all_paths, _all_paths_to_df
+    from ._download_flat_overview_realtime_report import download_flat_overview_realtime_report
 
     @property
     def _creds_hex_digest(self) -> str:

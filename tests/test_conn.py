@@ -5,6 +5,8 @@ import re
 import logging
 
 from eanalytics_api_py import Conn, eaload, earequest
+from eanalytics_api_py.internal.realtime_overview.path import _insummary
+
 import pandas as pd
 
 LOGGER = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ query = """GET {{
 )
 
 
-class Test_initial_config:
+class TestInitialConfig:
     def test_gridpool_name(self):
         assert (isinstance(gridpool_name, str))
 
@@ -89,7 +91,7 @@ ordertypecustom_map = conn.get_ordertypecustom_id_name_map(
     website_name=website_name)
 
 
-class Test_conn_get_view_id_name_map:
+class TestConnGetViewIdNameMap:
     def test_is_dict(self):
         assert (isinstance(view_map, dict))
 
@@ -97,7 +99,7 @@ class Test_conn_get_view_id_name_map:
         assert (len(view_map) > 1)
 
 
-class Test_conn_get_mdevice_id_name_map:
+class TestConnGetMdeviceIdNameMap:
     def test_is_dict(self):
         assert (isinstance(mdevice_map, dict))
 
@@ -105,7 +107,7 @@ class Test_conn_get_mdevice_id_name_map:
         assert (len(mdevice_map) > 1)
 
 
-class Test_conn_get_profile_id_name_map:
+class TestConnGetProfileIdNameMap:
     def test_is_dict(self):
         assert (isinstance(profile_map, dict))
 
@@ -113,7 +115,7 @@ class Test_conn_get_profile_id_name_map:
         assert (len(profile_map) > 1)
 
 
-class Test_conn_get_ordertype_id_name_map:
+class TestConnGetOrdertypeIdNameMap:
     def test_is_dict(self):
         assert (isinstance(ordertype_map, dict))
 
@@ -121,7 +123,7 @@ class Test_conn_get_ordertype_id_name_map:
         assert (len(ordertype_map) > 1)
 
 
-class Test_conn_get_ordertypecustom_id_name_map:
+class TestConnGetOrdertypecustomIdNameMap:
     def test_is_dict(self):
         assert (isinstance(ordertypecustom_map, dict))
 
@@ -139,7 +141,7 @@ props = [
 ]
 
 
-class Test_conn_get_website_by_name:
+class TestConnGetWebsiteByName:
     def test_is_dict(self):
         assert (isinstance(website, dict))
 
@@ -156,7 +158,7 @@ l_path2file = conn.download_datamining(
 )
 
 
-class Test_conn_download_datamining:
+class TestConnDownloadDatamining:
     def test_is_list(self):
         assert (isinstance(l_path2file, list))
 
@@ -186,7 +188,7 @@ df_dedup_touch = eaload.datamining.deduplicate_touchpoints(l_path2file)
 df_dedup_prod = eaload.datamining.deduplicate_products(l_path2file)
 
 
-class Test_eaload:
+class TestEaload:
     def test_is_df_gen(self):
         assert (isinstance(df_gen, pd.DataFrame))
 
@@ -216,7 +218,7 @@ path2file = conn.download_edw(
 df = eaload.generic.csv_files_2_df(path2file)
 
 
-class Test_conn_download_edw:
+class TestConnDownloadEdw:
     def test_is_str(self):
         assert (isinstance(path2file, str))
 
@@ -228,3 +230,18 @@ class Test_conn_download_edw:
 
     def test_remove_path2file(self):
         os.remove(path2file)
+
+
+df_flat_overview = conn.download_flat_overview_realtime_report(
+    website_name=website_name,
+    date_from=delta,
+    date_to=today,
+    report_name="insummary",
+    kpi=["click"],
+)
+
+
+class TestConnDownloadFlatOverview:
+    def test_cols(self):
+        assert (any(col_name in df_flat_overview.columns)
+                for col_name in _insummary.dim_px_map.values())
