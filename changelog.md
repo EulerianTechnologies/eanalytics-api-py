@@ -1,3 +1,6 @@
+### 0.1.33
+- fix prev version typo
+
 ### 0.1.32
 - Support for more channels in [flat_download_overview_realtime_report](eanalytics_api_py/conn/_download_flat_overview_realtime_report.py)
 

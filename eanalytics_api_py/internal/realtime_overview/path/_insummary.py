@@ -90,7 +90,7 @@ d_path = {
         "dim": list(dim_px_map.keys()),
     },
     "TRUSTED FEEDS FREE": {
-        "path": ["mcMEDIAINCOMING[%d]", "mcMEDIATF.mcOPE"],
+        "path": ["mcMEDIAINCOMING[%d]", "mcMEDIATFF.mcOPE"],
         "dim": list(dim_px_map.keys()),
     }
 }
