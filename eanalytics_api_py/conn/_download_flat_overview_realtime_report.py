@@ -1,6 +1,8 @@
 """This module allows to download flat realtime report data
 from the Eulerian Technologies API"""
 
+import copy
+
 import pandas as pd
 
 from eanalytics_api_py.internal import _request
@@ -132,16 +134,19 @@ def download_flat_overview_realtime_report(
         name="eanalytics_api_py.internal.realtime_overview.path._" + report_name,
         fromlist=report_name)
 
-    if not channel:
-        channel = list(path_module.d_path.keys())
-
     l_df = []
-    d_path = path_module.d_path.copy()  # because we override values we want a clean copy
+    d_path = copy.deepcopy(path_module.d_path)  # because we override values we want a clean copy
+
+    if not channel:
+        channel = list(d_path.keys())
     for _channel in channel:
         l_path = d_path[_channel]["path"]
         l_path[0] = l_path[0] % int(d_website["website_id"])
 
         l_dim = d_path[_channel]["dim"]
+        if not isinstance(l_dim, list):
+            raise TypeError(f"l_dim={l_dim} should be a list dtype")
+
         payload['path'] = ".".join(l_path)
         payload['ea-columns'] = ",".join([*l_dim, *kpi])
 
@@ -150,11 +155,20 @@ def download_flat_overview_realtime_report(
             request_type="get",
             params=payload,
             headers=self._http_headers,
-            print_log=True
-        )
+            print_log=True)
+        
         sub_df = pd.DataFrame(
             data=_json["data"]["rows"],
             columns=[d_field["name"] for d_field in _json["data"]["fields"]])
+
+        if "add_dim_value_map" in d_path[_channel]:
+            for _dim, _value in d_path[_channel]["add_dim_value_map"].items():
+                sub_df[_dim] = _value
+
+        if "rename_dim_map" in d_path[_channel]:
+            sub_df.rename(
+                columns=d_path[_channel]["rename_dim_map"],
+                inplace=True)
 
         l_df.append(sub_df)
 
@@ -163,16 +177,24 @@ def download_flat_overview_realtime_report(
         axis=0,
         ignore_index=True)
 
+    # override name with alias if alias is set
     for name, alias in path_module.override_dim_map.items():
-        mask = (df[alias].isin([0, '0']))
-        df.loc[mask, alias] = df[name]
-        df.drop(
-            labels=alias,
-            axis=1,
-            inplace=True)
+        if all(_ in df.columns for _ in [name, alias]):
+            mask = (df[alias].isin([0, '0']))
+            df.loc[mask, alias] = df[name]
+            df.drop(
+                labels=alias,
+                axis=1,
+                inplace=True)
 
     df.rename(
         columns=path_module.dim_px_map,
         inplace=True)
+
+    for col_name in df.columns:
+        if col_name in path_module.dim_px_map.values():
+            df[col_name] = df[col_name].astype("category")
+        elif '/' not in col_name:
+            df[col_name] = df[col_name].astype("int64")
 
     return df
