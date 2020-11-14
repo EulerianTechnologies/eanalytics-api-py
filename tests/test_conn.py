@@ -87,6 +87,12 @@ profile_map = conn.get_profile_id_name_map(
 ordertype_map = conn.get_ordertype_id_name_map(
     website_name=website_name)
 
+orderpayment_map = conn.get_orderpayment_id_name_map(
+    website_name=website_name)
+
+estimatetype_map = conn.get_estimatetype_id_name_map(
+    website_name=website_name)
+
 ordertypecustom_map = conn.get_ordertypecustom_id_name_map(
     website_name=website_name)
 
@@ -114,7 +120,6 @@ class TestConnGetProfileIdNameMap:
     def test_length(self):
         assert (len(profile_map) > 1)
 
-
 class TestConnGetOrdertypeIdNameMap:
     def test_is_dict(self):
         assert (isinstance(ordertype_map, dict))
@@ -122,6 +127,13 @@ class TestConnGetOrdertypeIdNameMap:
     def test_length(self):
         assert (len(ordertype_map) > 1)
 
+class TestConnGetOrderPaymentIdNameMap:
+    def test_is_dict(self):
+        assert (isinstance(orderpayment_map, dict))
+
+class TestConnGetEstimatetypeIdNameMap:
+    def test_is_dict(self):
+        assert (isinstance(estimatetype_map, dict))
 
 class TestConnGetOrdertypecustomIdNameMap:
     def test_is_dict(self):

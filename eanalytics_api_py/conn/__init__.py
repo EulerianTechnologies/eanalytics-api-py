@@ -6,7 +6,7 @@ import hashlib
 import inspect
 import time
 
-from ..internal import _request
+from eanalytics_api_py.internal import _request
 
 
 class Conn:
@@ -124,6 +124,88 @@ class Conn:
             print(log_msg)
 
         return None
+
+    def check_convert_realtime_filter(
+            self,
+            website_name: str,
+            d_filter: dict
+    ) -> None:
+        """ Check filter configuration
+        Parameters
+        ----------
+        d_filter: dict, obligatory
+            Dict of filters to be applied for realtime datasource requests
+
+        website_name: str, obligatory
+            Targeted website_name in Eulerian Technologies platform
+        Returns
+        -------
+            None, raise an error if bad configuration
+        """
+        if not isinstance(d_filter, dict):
+            raise TypeError(f"d_filter={d_filter} should be a dict dtype")
+
+        d_ret = {}
+        profile_map = self.get_profile_id_name_map(website_name)
+
+        for filter_k, filter_v in d_filter.items():
+            if not isinstance(filter_v, list):
+                raise TypeError(f"filter_v={filter_v} should be a list dtype")
+
+            if filter_k == "mdevicetype-id" and len(d_filter[filter_k]):
+                mdevicetype_map = self.get_mdevicetype_id_name_map(website_name)
+                for mdevicetype_id in d_filter[filter_k]:
+                    if mdevicetype_id not in mdevicetype_id:
+                        raise ValueError(f"{filter_k}={mdevicetype_id}" not in {','.join(mdevicetype_map.keys())})
+                d_ret["ea-subk"] = ",".join(d_filter[filter_k])
+
+            if filter_k == "ordertype-id" and len(d_filter[filter_k]):
+                ordertype_map = self.get_ordertype_id_name_map(website_name)
+                for ordertype_id in d_filter[filter_k]:
+                    if ordertype_id not in ordertype_id:
+                        raise ValueError(f"{filter_k}={ordertype_id}" not in {','.join(ordertype_map.keys())})
+                d_ret["shoppingcart-k1"] = ",".join(d_filter[filter_k])
+
+            if filter_k == "estimatetype-id" and len(d_filter[filter_k]):
+                estimatetype_map = self.get_estimatetype_id_name_map(website_name)
+                for estimatetype_id in d_filter[filter_k]:
+                    if estimatetype_id not in estimatetype_id:
+                        raise ValueError(f"{filter_k}={estimatetype_id}" not in {','.join(estimatetype_map.keys())})
+                d_ret["estimate-k1"] = ",".join(d_filter[filter_k])
+
+            if filter_k == "ordertypecustom-id" and len(d_filter[filter_k]):
+                ordertypecustom_map = self.get_ordertypecustom_id_name_map(website_name)
+                for ordertypecustom_id in d_filter[filter_k]:
+                    if ordertypecustom_id not in ordertypecustom_id:
+                        raise ValueError(f"{filter_k}={ordertypecustom_id}" not in {','.join(ordertypecustom_map.keys())})
+                d_ret["shoppingcart-k1-custom"] = ",".join(d_filter[filter_k])
+
+            if filter_k == "orderpayment-id" and len(d_filter[filter_k]):
+                orderpayment_map = self.get_orderpayment_id_name_map(website_name)
+                for orderpayment_id in d_filter[filter_k]:
+                    if orderpayment_id not in orderpayment_id:
+                        raise ValueError(f"{filter_k}={orderpayment_id}" not in {','.join(orderpayment_map.keys())})
+                d_ret["shoppingcart-k2"] = ",".join(d_filter[filter_k])
+
+            if filter_k in ["profilevisit-id"] and len(d_filter[filter_k]):
+                for profile_id in d_filter[filter_k]:
+                    if profile_id not in profile_map:
+                        raise ValueError(f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
+                d_ret["visitpprofil-k1"] = ",".join(d_filter[filter_k])
+
+            if filter_k in ['profilechange-session-id'] and len(d_filter[filter_k]):
+                for profile_id in d_filter[filter_k]:
+                    if profile_id not in profile_map:
+                        raise ValueError(f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
+                d_ret["profilechange-k1"] = ",".join(d_filter[filter_k])
+
+            if filter_k in ['profilechange-global-id'] and len(d_filter[filter_k]):
+                for profile_id in d_filter[filter_k]:
+                    if profile_id not in profile_map:
+                        raise ValueError(f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
+                d_ret["profilechange-k2"] = ",".join(d_filter[filter_k])
+
+        return d_ret
 
     def get_view_id_name_map(
             self,
@@ -257,6 +339,72 @@ class Conn:
 
         return {
             _json["data"]["rows"][i]["ordertype_id"]: _json["data"]["rows"][i]["ordertype_key"]
+            for i in range(len(_json["data"]["rows"]))
+        }
+
+    def get_estimatetype_id_name_map(
+            self,
+            website_name: str,
+    ) -> dict:
+        """ Fetch id and name properties of the estimatetype class
+
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
+
+        Returns
+        -------
+        dict
+            A dict as { "estimatetype_id" : "estimatetype_name" }
+        """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
+
+        estimatetype_url = f"{self._api_v2}/ea/{website_name}/db/estimatetype/searchvisible.json"
+        _json = _request._to_json(
+            request_type="get",
+            url=estimatetype_url,
+            params={"limit": 500, "output-as-kv": 1},
+            headers=self._http_headers,
+            print_log=self._print_log
+        )
+
+        return {
+            _json["data"]["rows"][i]["estimatetype_id"]: _json["data"]["rows"][i]["estimatetype_key"]
+            for i in range(len(_json["data"]["rows"]))
+        }
+
+    def get_orderpayment_id_name_map(
+            self,
+            website_name: str,
+    ) -> dict:
+        """ Fetch id and name properties of the orderpayment class
+
+        Parameters
+        ----------
+        website_name: str, obligatory
+            Your targeted website_name in Eulerian Technologies platform
+
+        Returns
+        -------
+        dict
+            A dict as { "orderpayment_id" : "orderpayment_name" }
+        """
+        if not isinstance(website_name, str):
+            raise TypeError("website_name should be a string")
+
+        orderpayment_url = f"{self._api_v2}/ea/{website_name}/db/orderpayment/searchvisible.json"
+        _json = _request._to_json(
+            request_type="get",
+            url=orderpayment_url,
+            params={"limit": 500, "output-as-kv": 1},
+            headers=self._http_headers,
+            print_log=self._print_log
+        )
+
+        return {
+            _json["data"]["rows"][i]["orderpayment_id"]: _json["data"]["rows"][i]["orderpayment_key"]
             for i in range(len(_json["data"]["rows"]))
         }
 

@@ -1,3 +1,6 @@
+### 0.1.34
+- New methods for Conn class to retrieve orderpayment and estimatetype
+
 ### 0.1.33
 - fix prev version typo
 

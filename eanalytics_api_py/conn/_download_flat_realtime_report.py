@@ -18,10 +18,7 @@ def download_flat_realtime_report(
         kpi: list,
         date_scale: str = '',
         view_id: int = 0,
-        mdevicetype_id: list = None,
-        ordertype_id: list = None,
-        ordertypecustom_id: list = None,
-        profile_id: list = None,
+        filters: dict = None
 ) -> pd.DataFrame:
     """ Fetch realtime report data into a pandas dataframe
 
@@ -51,17 +48,8 @@ def download_flat_realtime_report(
     view_id: int, optional
         Between 0 and 9
 
-    mdevicetype_id: list, optional
-        List of mdevicetype_id to filter on
-
-    ordertype_id: list, optional
-        List of ordertype_id to filter on
-
-    ordertypecustom_id: list, optional
-        List of ordertypecustom_id to filter on
-
-    profile_id: list, optional
-        List of profile_id to filter on
+    filters: dict, optional
+        To filter request result
 
     Returns
     -------
@@ -97,43 +85,17 @@ def download_flat_realtime_report(
         'ea-enable-datefmt': "%s",  # format the date as an epoch timestamp
         'ea-columns': "id," + ",".join(kpi),
     }
-    if mdevicetype_id:
-        if not isinstance(mdevicetype_id, list):
-            raise TypeError("mdevicetype_id should be a list")
 
-        mdevicetype_map = self.get_mdevicetype_id_name_map(website_name)
-        for _id in mdevicetype_id:
-            if _id not in mdevicetype_map:
-                raise ValueError(f"mdevicetype_id={_id} not allowed. Allowed={', '.join(mdevicetype_map.keys())}")
-        payload["ea-subk"] = ",".join(mdevicetype_id)
+    if filters:
+        if not isinstance(filters, dict):
+            raise TypeError(f"filters={filters} should be a dict dtype")
+        filters = self.check_convert_realtime_filter(website_name, filters)
+    else:
+        filters = {}
 
-    if ordertype_id:
-        if not isinstance(ordertype_id, list):
-            raise TypeError("ordertype_id should be a list")
-        ordertype_map = self.get_ordertype_id_name_map(website_name)
-        for _id in ordertype_id:
-            if _id not in ordertype_map:
-                raise ValueError(f"ordertype_id={_id} not allowed. Allowed={', '.join(ordertype_map.keys())}")
-        payload["shoppingcart-k1"] = ",".join(ordertype_id)
-
-    if ordertypecustom_id:
-        if not isinstance(ordertypecustom_id, list):
-            raise TypeError("ordertypecustom_id should be a list")
-        ordertypecustom_map = self.get_ordertypecustom_id_name_map(website_name)
-        for _id in ordertypecustom_id:
-            if _id not in ordertypecustom_map:
-                raise ValueError(
-                    f"ordertypecustom_id={_id} not allowed. Allowed={', '.join(ordertypecustom_map.keys())}")
-        payload["shoppingcart-k1-custom"] = ",".join(ordertypecustom_id)
-
-    if profile_id:
-        if not isinstance(profile_id, list):
-            raise TypeError("profile_id should be a list")
-        profile_map = self.get_profile_id_name_map(website_name)
-        for _id in profile_id:
-            if _id not in profile_map:
-                raise ValueError(f"profile_id={_id} not allowed. Allowed={', '.join(profile_map.keys())}")
-        payload["visitpprofil-k1"] = ",".join(profile_id)
+    for k in filters.keys():
+        if len(filters[k]):
+            payload[k] = filters[k]
 
     l_allowed_scale = ["H", "D", "W", "M"]
     if date_scale and date_scale not in l_allowed_scale:
