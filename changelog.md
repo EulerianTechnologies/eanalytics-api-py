@@ -1,3 +1,7 @@
+### 0.1.35
+- conn.download_datamining: deep copy the object payload to avoid
+modification on the original object
+
 ### 0.1.34
 - New methods for Conn class to retrieve orderpayment and estimatetype
 

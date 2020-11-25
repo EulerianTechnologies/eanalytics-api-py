@@ -8,21 +8,20 @@ import pandas as _pd
 import numpy as np
 from .generic import csv_files_2_df
 
+
 def deduplicate_touchpoints(
-    source : list,
-    sep=';',
-    quotechar='"',
-    compression='gzip',
-    encoding='utf-8',
-    **kwargs
+        source: list,
+        sep=';',
+        quotechar='"',
+        compression='gzip',
+        encoding='utf-8',
+        **kwargs
 ):
     """ Deduplicate marketing touchpoints
 
         Parameters
         ----------
         source : list of path2file OR pandas DataFrame
-
-        prdref_colname : str, optional
 
         sep : str, obligatory
             The csv sep char
@@ -51,8 +50,7 @@ def deduplicate_touchpoints(
     """
 
     if isinstance(source, str):
-        source = [ source ]
-
+        source = [source]
 
     if isinstance(source, list):
         df = csv_files_2_df(
@@ -105,17 +103,18 @@ def deduplicate_touchpoints(
         columns.append(col_name)
 
     df.columns = columns
-    df = df[~df.channel_p0.isin(['-',0,None, '0',np.nan])]
+    df = df[~df.channel_p0.isin(['-', 0, None, '0', np.nan])]
 
     return df
 
+
 def deduplicate_products(
-    source : list,
-    sep=';',
-    quotechar='"',
-    compression='gzip',
-    encoding='utf-8',
-    **kwargs
+        source: list,
+        sep=';',
+        quotechar='"',
+        compression='gzip',
+        encoding='utf-8',
+        **kwargs
 ):
     """ Deduplicate product params columns
 
@@ -133,8 +132,6 @@ def deduplicate_products(
     ----------
     source : list, obligatory
         The targeted list of path2files or pandas DataFrame
-
-    prdref_colname : str, optional
 
     sep : str, obligatory
         The csv sep char
@@ -163,7 +160,7 @@ def deduplicate_products(
     """
 
     if isinstance(source, str):
-        source = [ source ]
+        source = [source]
 
     if isinstance(source, list):
         df = csv_files_2_df(
@@ -181,7 +178,6 @@ def deduplicate_products(
     else:
         raise ValueError("source should be a path2file or a pandas DataFrame")
 
-
     stubnames = []
     columns = []
 
@@ -195,19 +191,21 @@ def deduplicate_products(
         "productparam_"
     ]
 
-    columns = []
-
     # orderproduct_name_i
     for col_name in df.columns:
         for prd_col in prd_colnames:
             if col_name.startswith(prd_col):
                 l_col_name = col_name.split("_")
-                stubname = "_".join(l_col_name[:-1]) # orderproduct_name
-                idx = l_col_name[-1] # i
-                col_name = stubname+idx #orderproduct_namei
+                stubname = "_".join(l_col_name[:-1])  # orderproduct_name
+                idx = l_col_name[-1]  # i
+                col_name = stubname + idx  # orderproduct_namei
                 if stubname not in stubnames:
                     stubnames.append(stubname)
         columns.append(col_name)
+
+    if len(stubnames) == 0:
+        raise SystemError(f"No product column found starting by: {', '.join(prd_colnames)}")
+
     df.columns = columns
 
     for stubname in stubnames:
@@ -220,6 +218,6 @@ def deduplicate_products(
         i="order_ref",
         j="product_position"
     ).reset_index()
-    df = df[~df.orderproduct_ref.isin(['-',0,None, '0',np.nan])]
+    df = df[~df.orderproduct_ref.isin(['-', 0, None, '0', np.nan])]
 
     return df

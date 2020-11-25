@@ -9,6 +9,7 @@ import gzip
 import time
 from datetime import datetime, timedelta
 import csv
+import copy
 
 import ijson
 
@@ -68,6 +69,10 @@ def download_datamining(
     if not isinstance(payload, dict) or not payload:
         raise TypeError("payload should be a non-empty dict")
 
+    # solved a bug where the date_from and date_to of the payload were modified
+    # initial payload object changed in a loop
+    dc_payload = copy.deepcopy(payload)
+
     if not isinstance(n_days_slice, int) or n_days_slice < 0:
         raise TypeError("n_days_slice should be a positive integer")
 
@@ -77,11 +82,11 @@ def download_datamining(
         raise ValueError(f"datamining_type={datamining_type} not allowed.\n\
                         Use one of the following: {', '.join(l_allowed_datamining_types)}")
 
-    date_from = payload["date-from"] if "date-from" in payload else None
+    date_from = dc_payload["date-from"] if "date-from" in dc_payload else None
     if not date_from:
         raise ValueError("missing parameter=date-from in payload object")
 
-    date_to = payload['date-to'] if 'date-to' in payload else None
+    date_to = dc_payload['date-to'] if 'date-to' in dc_payload else None
     if not date_to:
         raise ValueError("missing parameter=date-from in payload object")
 
@@ -93,21 +98,20 @@ def download_datamining(
         raise ValueError("'date-from' cannot occur later than 'date-to'")
 
     # marketing attribution rule id, default to 0
-    if "view-id" in payload:
-        payload["view-id"] = str(payload["view-id"])
+    if "view-id" in dc_payload:
+        dc_payload["view-id"] = str(dc_payload["view-id"])
         match = re.match(
             pattern=r'^[0-9]$',
-            string=payload["view-id"]
+            string=dc_payload["view-id"]
         )
         if not match:
             raise ValueError("view-id should match ^[0-9]$")
 
     else:
-        payload["view-id"] = "0"
+        dc_payload["view-id"] = "0"
 
     website_name = website_name
     datamining_type = datamining_type
-    payload = payload
     status_waiting_seconds = status_waiting_seconds
     n_days_slice = n_days_slice
     dt_tmp_date_to = dt_date_to
@@ -131,7 +135,7 @@ def download_datamining(
             website_name,
             datamining_type,
             "view",
-            payload["view-id"],
+            dc_payload["view-id"],
             "from",
             date_from_file,
             "to",
@@ -144,15 +148,15 @@ def download_datamining(
                 override_file=override_file,
                 print_log=self._print_log
         ):
-            payload['date-from'] = date_from
-            payload['date-to'] = date_to
+            dc_payload['date-from'] = date_from
+            dc_payload['date-to'] = date_to
 
             search_url = f"{self._api_v2}/ea/{website_name}/report/{datamining_type}/search.json"
 
             search_json = _request._to_json(
                 request_type="get",
                 url=search_url,
-                params=payload,
+                params=dc_payload,
                 headers=self._http_headers,
                 print_log=self._print_log
             )
