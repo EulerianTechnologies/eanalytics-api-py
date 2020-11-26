@@ -62,7 +62,4 @@ def download_realtime_report(
         data=rows,
     )
 
-    df["website"] = website_name  # useful when querying multiple websites will be implemented
-    df["date"] = pd.to_datetime(df["date"], unit='s')
-
     return df

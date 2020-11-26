@@ -1,3 +1,6 @@
+### 0.1.36
+- conn.download_realtime_report: fix when date in absent in the response json
+
 ### 0.1.35
 - conn.download_datamining: deep copy the object payload to avoid
 modification on the original object
