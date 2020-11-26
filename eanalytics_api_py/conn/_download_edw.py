@@ -86,7 +86,7 @@ def download_edw(
             self._gridpool_name,
             "_".join(epoch_from_to_findall[0]),
             "_".join(readers),
-        ]) + ".cvs.gzip"
+        ]) + ".csv.gzip"
 
         if _request._is_skippable(
                 output_path2file=output_path2file,

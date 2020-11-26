@@ -1,3 +1,7 @@
+### 0.1.38
+- notebook edw_raw_clickview
+- typo in filename in Conn.download_edw
+
 ### 0.1.37
 - conn.download_flat_realtime_report, incorrectly setting dtype=int64
 for floats
