@@ -156,7 +156,5 @@ def download_flat_overview_realtime_report(
     for col_name in df.columns:
         if col_name in path_module.dim_px_map.values():
             df[col_name] = df[col_name].astype("category")
-        elif '/' not in col_name:
-            df[col_name] = df[col_name].astype("int64")
 
     return df

@@ -1,3 +1,7 @@
+### 0.1.37
+- conn.download_flat_realtime_report, incorrectly setting dtype=int64
+for floats
+
 ### 0.1.36
 - conn.download_realtime_report: fix when date in absent in the response json
 
