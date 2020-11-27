@@ -61,5 +61,11 @@ def download_realtime_report(
         columns=fields,
         data=rows,
     )
+    for col_name in df.columns:
+        if col_name != "name":
+            if any(df[col_name].astype("str").str.contains(".", regex=False)):
+                df[col_name] = df[col_name].astype("float64")
+            else:
+                df[col_name] = df[col_name].astype("int64")
 
     return df

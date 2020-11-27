@@ -1,3 +1,7 @@
+### 0.1.39
+- fix path for SL channel in Conn.download_float_overview_realtime_report
+- set correct pandas column type for realtime report and flat overview
+
 ### 0.1.38
 - notebook edw_raw_clickview
 - typo in filename in Conn.download_edw

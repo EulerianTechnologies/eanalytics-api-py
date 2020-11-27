@@ -4,7 +4,6 @@ from the Eulerian Technologies API"""
 import copy
 
 import pandas as pd
-
 from eanalytics_api_py.internal import _request
 
 
@@ -118,7 +117,7 @@ def download_flat_overview_realtime_report(
             params=payload,
             headers=self._http_headers,
             print_log=True)
-        
+
         sub_df = pd.DataFrame(
             data=_json["data"]["rows"],
             columns=[d_field["name"] for d_field in _json["data"]["fields"]])
@@ -156,5 +155,9 @@ def download_flat_overview_realtime_report(
     for col_name in df.columns:
         if col_name in path_module.dim_px_map.values():
             df[col_name] = df[col_name].astype("category")
+        elif any(df[col_name].astype("str").str.contains(".", regex=False)):
+            df[col_name] = df[col_name].astype("float64")
+        else:
+            df[col_name] = df[col_name].astype("int64")
 
     return df

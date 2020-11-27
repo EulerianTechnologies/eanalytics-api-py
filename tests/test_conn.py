@@ -118,14 +118,14 @@ class TestConnGetProfileIdNameMap:
         assert (isinstance(profile_map, dict))
 
     def test_length(self):
-        assert (len(profile_map) > 1)
+        assert (len(profile_map) > 0)
 
 class TestConnGetOrdertypeIdNameMap:
     def test_is_dict(self):
         assert (isinstance(ordertype_map, dict))
 
     def test_length(self):
-        assert (len(ordertype_map) > 1)
+        assert (len(ordertype_map) > 0)
 
 class TestConnGetOrderPaymentIdNameMap:
     def test_is_dict(self):
@@ -140,7 +140,7 @@ class TestConnGetOrdertypecustomIdNameMap:
         assert (isinstance(ordertypecustom_map, dict))
 
     def test_length(self):
-        assert (len(ordertypecustom_map) > 1)
+        assert (len(ordertypecustom_map) > 0)
 
 
 website = conn.get_website_by_name(
