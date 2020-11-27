@@ -16,6 +16,20 @@ dim_px_map = {
     "submediagroup_name": "p20",
 }
 
+gen_dim = [
+    "media_key",
+    "ope_name",
+    "opealias_alias",
+    "publisher_name",
+    "publisheralias_alias",
+    "mediaplan_name",
+    "mediaplangroup_name",
+    "submedia_name",
+    "publishergroup_name",
+    "publishertype_name",
+    "submediagroup_name"
+]
+
 override_dim_map = {
     "publisher_name": "publisheralias_alias",
     "ope_name": "opealias_alias",
@@ -24,11 +38,11 @@ override_dim_map = {
 d_path = {
     "ADVERTISING": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAAD.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "AFFILIATION": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAAF.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "BRANDING": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIABR.mcOPEDATASEARCHENGINE.mcOPEDATASEARCHENGINE"],
@@ -38,11 +52,11 @@ d_path = {
     },
     "INTERNAL": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAIN.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "MAILING": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAML.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "NATURAL": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIANA"],
@@ -51,15 +65,15 @@ d_path = {
     },
     "OFFLINE": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAOF.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "PAID INCLUSION": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAPI.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "PARTNER": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIAPT.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "REFERER": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIARF.mcMEDIARF"],
@@ -75,23 +89,23 @@ d_path = {
     },
     "SOCIAL": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIASC.mcOPE"],
-        "dim": ["media_key", "semcampaign_name", "publisher_name", "publisheralias_alias", "publishergroup_name",
-                "publishertype_name", "mediaplan_name", "mediaplangroup_name", "submedia_name", "submediagroup_name"],
+        "dim": gen_dim,
     },
     "SOCIALFREE": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIASCF.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "SPONSOREDLINKS": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIASL.mcSEMCAMPAIGN"],
-        "dim": list(dim_px_map.keys()),
+        "dim": ["media_key", "semcampaign_name", "publisher_name", "publisheralias_alias", "publishergroup_name",
+                "publishertype_name", "mediaplan_name", "mediaplangroup_name", "submedia_name", "submediagroup_name"],
     },
     "TRUSTEDFEED": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIATF.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     },
     "TRUSTEDFREE": {
         "path": ["mcMEDIAINCOMING[%d]", "mcMEDIATFF.mcOPE"],
-        "dim": list(dim_px_map.keys()),
+        "dim": gen_dim,
     }
 }

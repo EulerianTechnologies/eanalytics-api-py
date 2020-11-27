@@ -100,6 +100,7 @@ def download_flat_overview_realtime_report(
 
     if not channel:
         channel = list(d_path.keys())
+
     for _channel in channel:
         l_path = d_path[_channel]["path"]
         l_path[0] = l_path[0] % int(d_website["website_id"])
@@ -131,26 +132,25 @@ def download_flat_overview_realtime_report(
                 columns=d_path[_channel]["rename_dim_map"],
                 inplace=True)
 
+        # override name with alias if alias is set
+        for name, alias in path_module.override_dim_map.items():
+            if all(_ in sub_df.columns for _ in [name, alias]):
+                mask = (sub_df[alias].isin([0, '0']))
+                sub_df.loc[mask, alias] = sub_df[name]
+                sub_df.drop(
+                    labels=alias,
+                    axis=1,
+                    inplace=True)
+
+        sub_df.rename(
+            columns=path_module.dim_px_map,
+            inplace=True)
         l_df.append(sub_df)
 
     df = pd.concat(
         l_df,
         axis=0,
         ignore_index=True)
-
-    # override name with alias if alias is set
-    for name, alias in path_module.override_dim_map.items():
-        if all(_ in df.columns for _ in [name, alias]):
-            mask = (df[alias].isin([0, '0']))
-            df.loc[mask, alias] = df[name]
-            df.drop(
-                labels=alias,
-                axis=1,
-                inplace=True)
-
-    df.rename(
-        columns=path_module.dim_px_map,
-        inplace=True)
 
     for col_name in df.columns:
         if col_name in path_module.dim_px_map.values():

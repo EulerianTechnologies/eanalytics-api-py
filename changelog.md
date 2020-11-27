@@ -1,3 +1,7 @@
+### 0.1.40
+- Explicit call to action for BlockingIOError in Conn.download_edw
+- Solved issue where "p1" column appeared twice in Conn.download_flat_overview_realtime_report 
+
 ### 0.1.39
 - fix path for SL channel in Conn.download_float_overview_realtime_report
 - set correct pandas column type for realtime report and flat overview

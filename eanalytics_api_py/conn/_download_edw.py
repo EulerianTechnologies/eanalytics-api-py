@@ -132,13 +132,19 @@ def download_edw(
             "query": query
         }
 
-        search_json = _request._to_json(
-            request_type="post",
-            url=search_url,
-            json_data=edw_json_params,
-            headers=edw_http_headers,
-            print_log=self._print_log
-        )
+        try:
+            search_json = _request._to_json(
+                    request_type="post",
+                    url=search_url,
+                    json_data=edw_json_params,
+                    headers=edw_http_headers,
+                    print_log=self._print_log)
+        except BlockingIOError as e:
+            self._log(
+                "".join(["Check with your network administrator that the port=981 is opened",
+                         f" for your eulerian API hostname={self._base_url}"]))
+            raise e
+
         jobrun_id = search_json['data'][0]
 
     status_url = f"{self._base_url}:981/edw/jobs/{jobrun_id}"
@@ -183,7 +189,7 @@ def _stream_to_csv_gzip(
         path2file: str,
         search_url: str,
         edw_http_headers: dict,
-        print_log : bool = True
+        print_log: bool = True
 ) -> None:
     """ Stream the Eulerian Data Warehouse data in csv gzipped file
 
