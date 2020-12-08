@@ -22,7 +22,8 @@ setup(
         'ipython>=7.16.1',
         'ipywidgets>=7.5.1',
         'numpy>=1.19.1',
-        'pytest>=6.1.1'
+        'pytest>=6.1.1',
+        'pathlib>=1.0.1'
     ],
     keywords=[
         'eulerian',
@@ -42,5 +43,5 @@ setup(
     platforms=['any'],
     python_requires='>=3.6',
     url='https://github.com/EulerianTechnologies/eanalytics-api-py',
-    version='0.1.40',
+    version='0.1.41',
 )

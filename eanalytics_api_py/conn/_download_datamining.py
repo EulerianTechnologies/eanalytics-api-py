@@ -62,6 +62,7 @@ def download_datamining(
     """
     if not isinstance(website_name, str):
         raise TypeError("website_name should be a str type")
+    self._is_allowed_website_name(website_name)
 
     if not isinstance(datamining_type, str):
         raise TypeError("datamining_type should be a str type")

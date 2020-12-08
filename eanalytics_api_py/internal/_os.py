@@ -1,6 +1,8 @@
 """Internal os helper"""
 
 import os
+from pathlib import Path
+
 from ._log import _log
 
 
@@ -46,3 +48,20 @@ def _create_directory(
             os.mkdir(output_directory)
 
     return None
+
+def _remove_file_extensions(
+        path2file: str
+) -> str:
+    """ Remove extensions for the give path2file
+
+    Parameters
+    ----------
+    path2file : str, obligatory
+        The targeted path2file
+    """
+    if not isinstance(path2file, str):
+        raise TypeError(f"path2file={path2file} should be a string instance")
+    p = Path(path2file)
+    suffixes = "".join(p.suffixes)
+    path2file = path2file.replace(suffixes, "")
+    return path2file

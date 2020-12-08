@@ -138,9 +138,5 @@ def __set_df_col_dtypes( df : _pd.DataFrame() ):
             df[col_name] = df[col_name].astype('category')
         elif df[col_name].dtype == 'object':
             df[col_name] = df[col_name].astype('category')
-        elif df[col_name].dtype == 'int64':
-            df[col_name] = df[col_name].astype('int32')
-        elif df[col_name].dtype == 'float64':
-            df[col_name] = df[col_name].astype('float32')
 
     return df

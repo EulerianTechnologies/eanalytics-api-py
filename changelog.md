@@ -1,3 +1,8 @@
+### 0.1.41
+- download_* methods: now check if requested website_name is allowed for current user
+- download_edw: dump urllib response if ijson.common.IncompleteJSONError occurs
+- download_edw: properly kill job uuid
+
 ### 0.1.40
 - Explicit call to action for BlockingIOError in Conn.download_edw
 - Solved issue where "p1" column appeared twice in Conn.download_flat_overview_realtime_report 

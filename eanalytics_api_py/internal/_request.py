@@ -5,7 +5,7 @@ import urllib
 import os
 
 import requests
-
+from eanalytics_api_py.internal import _os
 from ._log import _log
 
 
@@ -152,3 +152,36 @@ def _is_skippable(
         log=f"Local file={output_path2file} not found, downloading the data",
         print_log=print_log)
     return False
+
+def debug_urllib_response_2_file(
+        path2file: str,
+        req: urllib.request.Request,
+        print_log: bool = True):
+    """ Write urllib debug response to file
+
+    Parameters
+    ----------
+    path2file : str, obligatory
+        The path2file to put the data into
+
+    req : urllib.request.Request, obligatory
+        The request object to fetch from
+
+    print_log: bool
+        Set to False to hide logs
+        Default=True
+    """
+
+    if not isinstance(path2file, str):
+        raise TypeError(f"path2file={path2file} should be a string instance")
+
+    if not isinstance(print_log, bool):
+        raise TypeError(f"print_log={print_log} should be a bool instance")
+
+    path2file = _os._remove_file_extensions(path2file)+".json"
+    _log(f"Writing debug JSON into path2file={path2file}",
+            print_log=print_log)
+
+    with urllib.request.urlopen(req) as f_in:
+        with open(path2file, "wb") as f_out:
+            f_out.write(f_in.read())

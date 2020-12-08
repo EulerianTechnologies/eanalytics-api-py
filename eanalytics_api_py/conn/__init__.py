@@ -2,7 +2,6 @@
 retrieve data from Eulerian Technologies API
 """
 
-import hashlib
 import inspect
 import time
 
@@ -31,7 +30,6 @@ class Conn:
     -------
         Class is instantiated
     """
-    _cached_creds = set()
 
     def __init__(
             self,
@@ -52,7 +50,6 @@ class Conn:
         if not isinstance(api_key, str) or len(api_key) == 0:
             raise TypeError("api_key should be a non-null string type")
 
-        self._cached_credentials = set()
         self._datacenter = datacenter
         self._gridpool_name = gridpool_name
         self._base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
@@ -60,14 +57,7 @@ class Conn:
         self._api_key = api_key
         self._http_headers = {"Authorization": f"Bearer {api_key}"}
         self._print_log = print_log
-
-        if self._creds_hex_digest in Conn._cached_creds:
-            self._log("Credentials found in cache")
-
-        else:
-            self._check_credentials()
-            Conn._cached_creds.add(self._creds_hex_digest)
-            self._log("New credentials ok")
+        self._check_credentials()
 
     # Import class methods
     from ._download_datamining import download_datamining
@@ -76,27 +66,35 @@ class Conn:
     from ._download_flat_realtime_report import download_flat_realtime_report, _get_all_paths, _all_paths_to_df
     from ._download_flat_overview_realtime_report import download_flat_overview_realtime_report
 
-    @property
-    def _creds_hex_digest(self) -> str:
-        concate_creds_values = ''.join([
-            self._datacenter,
-            self._gridpool_name,
-            self._api_key
-        ])
-        hash_object = hashlib.md5(concate_creds_values.encode())
-        creds_hex_digest = hash_object.hexdigest()
-        return creds_hex_digest
-
     def _check_credentials(self) -> None:
-        """Check credentials validity"""
+        """Check credentials validity
+        set the allowed_website_names attributes
+        """
         # raise an error if API error or fail to load as json
+        allowed_website_names = []
         overview_url = f"{self._api_v2}/er/account/authtree.json"
-        _request._to_json(
+        authtree_json = _request._to_json(
             request_type="get",
             url=overview_url,
             headers=self._http_headers,
-            print_log=self._print_log
-        )
+            print_log=self._print_log)
+
+        for k, v in authtree_json["data"].items():
+            allowed_website_names.append(v["website_name"])
+
+        self._allowed_website_names = allowed_website_names
+
+    def _is_allowed_website_name(self,
+                                 website_name: str) -> bool:
+
+        if not isinstance(website_name, str):
+            raise TypeError(f"website_name={website_name} should be a str instance")
+
+        if website_name in self._allowed_website_names:
+            return True
+
+        raise PermissionError(f"You're not allowed to access website_name={website_name}\n",
+                              f"Allowed website_name: {', '.join(self._allowed_website_names)}")
 
     def _log(
             self,
@@ -177,7 +175,8 @@ class Conn:
                 ordertypecustom_map = self.get_ordertypecustom_id_name_map(website_name)
                 for ordertypecustom_id in d_filter[filter_k]:
                     if ordertypecustom_id not in ordertypecustom_id:
-                        raise ValueError(f"{filter_k}={ordertypecustom_id}" not in {','.join(ordertypecustom_map.keys())})
+                        raise ValueError(
+                            f"{filter_k}={ordertypecustom_id}" not in {','.join(ordertypecustom_map.keys())})
                 d_ret["shoppingcart-k1-custom"] = ",".join(d_filter[filter_k])
 
             if filter_k == "orderpayment-id" and len(d_filter[filter_k]):
@@ -190,19 +189,22 @@ class Conn:
             if filter_k in ["profilevisit-id"] and len(d_filter[filter_k]):
                 for profile_id in d_filter[filter_k]:
                     if profile_id not in profile_map:
-                        raise ValueError(f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
+                        raise ValueError(
+                            f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
                 d_ret["visitpprofil-k1"] = ",".join(d_filter[filter_k])
 
             if filter_k in ['profilechange-session-id'] and len(d_filter[filter_k]):
                 for profile_id in d_filter[filter_k]:
                     if profile_id not in profile_map:
-                        raise ValueError(f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
+                        raise ValueError(
+                            f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
                 d_ret["profilechange-k1"] = ",".join(d_filter[filter_k])
 
             if filter_k in ['profilechange-global-id'] and len(d_filter[filter_k]):
                 for profile_id in d_filter[filter_k]:
                     if profile_id not in profile_map:
-                        raise ValueError(f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
+                        raise ValueError(
+                            f"{filter_k}={profile_id} not allowed. Allowed={', '.join(profile_map.keys())}")
                 d_ret["profilechange-k2"] = ",".join(d_filter[filter_k])
 
         return d_ret

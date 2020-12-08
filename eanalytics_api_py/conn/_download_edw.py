@@ -64,17 +64,15 @@ def download_edw(
     if not epoch_from_to_findall:
         raise ValueError(f"Could not read epoch_from and epoch_to from query=\n{query}")
 
-    readers_findall = re.findall(r'\w+:\w+@[\w_-]+', query)  # ea:pageview@demo-fr
+    readers_findall = re.findall(r'(\w+):(\w+)@([\w_-]+)', query)  # ea:pageview@demo-fr
     if not readers_findall:
         raise ValueError(f"Could not read READER from query=\n{query}")
 
-    # for valid filename
-    readers = list(
-        map(
-            lambda s: s.replace(':', '_').replace('@', '_'),
-            readers_findall
-        )
-    )
+    readers = []
+    for reader in readers_findall:
+        storage_name, table_name, website_name = reader
+        self._is_allowed_website_name(website_name)
+        readers += [storage_name, table_name, website_name]
 
     if output_path2file:
         if not isinstance(output_path2file, str):
@@ -229,29 +227,49 @@ def _stream_to_csv_gzip(
         columns = []
         with urllib.request.urlopen(req) as f:
             objects = ijson.items(f, "headers.schema.item")
-            headers = (header for header in objects)
+            try:
+                headers = (header for header in objects)
+            except ijson.common.IncompleteJSONError as e:
+                _request.debug_urllib_response_2_file(
+                        path2file=path2file,
+                        req=req,
+                        print_log=print_log)
+                raise e
+
             for header in headers:
                 columns.append(header[1])
             csvwriter.writerow(columns)
 
         with urllib.request.urlopen(req) as f:
             objects = ijson.items(f, "rows.item")
-            rows = (row for row in objects)
+            try:
+                rows = (row for row in objects)
+            except ijson.common.IncompleteJSONError as e:
+                _request.debug_urllib_response_2_file(
+                        path2file=path2file,
+                        req=req,
+                        print_log=print_log)
+                raise e
+
             for row in rows:
                 csvwriter.writerow(row)
 
-    # Try to kill job, non blocking error
+    # Kill the job to free the server memory
     with urllib.request.urlopen(req) as f:
-        objects = ijson.items(f, "headers.uuid.item")
-        uuids = (uuid for uuid in objects)
+        objects = ijson.items(f, "headers.uuid")
+        try:
+            uuids = (uuid for uuid in objects)
+        except ijson.common.IncompleteJSONError as e:
+            _request.debug_urllib_response_2_file(
+                path2file=path2file,
+                req=req,
+                print_log=print_log)
+            raise e
+
         for uuid in uuids:
             cancel_url = f"{search_url}/{uuid}/cancel"
-            try:
-                requests.post(
+            _request._to_json(
+                    request_type="get",
                     url=cancel_url,
-                    headers=edw_http_headers
-                )
-            except Exception as e:
-                _log._log(
-                    log=f"Could not kill the process uuid={uuid}\n exception:{e}",
+                    headers=edw_http_headers,
                     print_log=print_log)
