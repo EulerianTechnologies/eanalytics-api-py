@@ -52,6 +52,8 @@ class Conn:
 
         self._datacenter = datacenter
         self._gridpool_name = gridpool_name
+        self._edw_host = f"https://edw.ea.eulerian.{datacenter}"
+        self._edw_jobs = f"{self._edw_host}/edw/jobs"
         self._base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
         self._api_v2 = f"{self._base_url}/ea/v2"
         self._api_key = api_key

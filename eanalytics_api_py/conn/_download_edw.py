@@ -123,7 +123,7 @@ def download_edw(
 
     # no jobrun_id provided, we send the query to get one
     if not jobrun_id:
-        search_url = f"{self._base_url}:981/edw/jobs"
+        search_url = self._edw_jobs
 
         edw_json_params = {
             "kind": "edw#request",
@@ -137,15 +137,16 @@ def download_edw(
                     json_data=edw_json_params,
                     headers=edw_http_headers,
                     print_log=self._print_log)
+        # DEPRECATED, edw has now it's own hostname
         except BlockingIOError as e:
             self._log(
-                "".join(["Check with your network administrator that the port=981 is opened",
-                         f" for your eulerian API hostname={self._base_url}"]))
+                "".join(["Check with your network administrator that you can connect",
+                         f"to the hostname={self._edw_host}"]))
             raise e
 
         jobrun_id = search_json['data'][0]
 
-    status_url = f"{self._base_url}:981/edw/jobs/{jobrun_id}"
+    status_url = f"{self._edw_jobs}/{jobrun_id}"
 
     if not isinstance(status_waiting_seconds, int) or status_waiting_seconds < 5:
         status_waiting_seconds = 5

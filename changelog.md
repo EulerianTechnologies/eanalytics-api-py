@@ -1,3 +1,6 @@
+### 0.1.42
+- fix EDW new hostname
+
 ### 0.1.41
 - download_* methods: now check if requested website_name is allowed for current user
 - download_edw: dump urllib response if ijson.common.IncompleteJSONError occurs
