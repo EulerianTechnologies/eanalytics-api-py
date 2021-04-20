@@ -1,3 +1,6 @@
+### 0.1.44
+- Remove some traces.
+
 ### 0.1.43
 - Avoid being connected during JSON -> CSV -> GZ convertions
 
