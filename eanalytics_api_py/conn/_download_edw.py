@@ -6,21 +6,201 @@ import time
 import urllib
 import gzip
 import csv
-
 import requests
 import ijson
+import sys
+import os
 
 from eanalytics_api_py.internal import _request, _log
 
-
+#
+# @brief Get session token from Eulerian Authority services.
+#
+# @param domain - Eulerian Authority domain.
+# @param headers - Http headers.
+# @param ip - host IP.
+# @param log - Print log message.
+#
+# @return Session token.
+#
+def session( domain, headers, ip, log ) :
+    url = f"{domain}/er/account/get_dw_session_token.json"
+    payload = { 'ip' : ip }
+    json = _request._to_json(
+        request_type = "get",
+        url = url,
+        headers = headers,
+        params = payload,
+        print_log = log
+    )
+    return json[ 'data' ][ 'rows' ][ 0 ][ 0 ]
+#
+# @brief Compress given file.
+#
+# @param path_in - Input file path.
+# @param path_out - Compressed file path.
+#
+def gzip_compress( path_in, path_out ) :
+    try :
+        f = open( path_in, "r" )
+        data = f.read()
+        f.close()
+    except IOError as e :
+        print( str( e ) )
+        raise e
+    with gzip.open( filename = path_out, mode = "wt" ) as gzipfile :
+        gzipfile.write( data )
+        gzipfile.close()
+#
+# @brief Convert JSON reply file to CSV file.
+#
+# @param path_json - JSON file path.
+#
+# @return CSV file path
+#
+def json_to_csv( path_json ) :
+    pattern = re.compile( "^/.+/\d+" )
+    match = pattern.search( path_json )
+    path_csv = match.group() + ".csv"
+    stream_in = open( path_json, "r" )
+    stream_out = open( path_csv, "w" )
+    writer = csv.writer( stream_out, delimiter = ";" )
+    objects = ijson.items( stream_in, "headers.schema.item" )
+    try :
+        headers = ( header for header in objects )
+    except ijson.common.IncompleteJSONError as e :
+        raise e
+    columns = []
+    for header in headers :
+        columns.append( header[ 1 ] )
+    writer.writerow( columns )
+    stream_in.seek( 0 )
+    objects = ijson.items( stream_in, "rows.item" )
+    try :
+        rows = ( row for row in objects )
+    except ijson.common.IncompleteJSONError as e :
+        raise e
+    for row in rows :
+        writer.writerow( row )
+    stream_out.close()
+    stream_in.close()
+    return path_csv
+#
+# @brief Create a JOB on Eulerian Data Warehouse Platform.
+#
+# @param url - Url of Eulerian Data Warehouse Platform.
+# @param headers - HTTP headers.
+# @param query - Eulerian Data Warehouse Command.
+# @param log - Print log message.
+#
+def job_create( url, headers, query, log ) :
+    request = {
+        "kind" : "edw#request",
+        "query" : query
+    }
+    return _request._to_json(
+        request_type = 'post',
+        url = url,
+        json_data = request,
+        headers = headers,
+        print_log = log
+        )
+#
+# @brief Download JSON reply file of a JOB.
+#
+# @param url - URL of Eulerian Data Warehouse Job reply.
+# @param reply - Last reply.
+# @param headers - HTTP headers.
+# @param directory - Output directory.
+#
+# @return JSON reply file path.
+#
+def job_download( conn, reply, headers, directory ) :
+    uuid, url = reply[ 'data' ]
+    reply = requests.get( url, headers = headers, stream = True )
+    if reply.status_code != 200 :
+        return None
+    length = reply.headers[ 'Content-Length' ]
+    path = directory + '/' + str( uuid ) + '.json'
+    stream = open( path, 'wb' )
+    if stream is None :
+        return None
+    total = 0
+    for line in reply.iter_content( 8192 ) :
+        total += len( line )
+        conn._logrewind(
+            "Write : " + str( len( line ) ) + "/" + unit( total ) + 
+            "/" + unit( int( length ) )
+            )
+        stream.write( line )
+    conn._log( "" )
+    stream.close()
+    return path
+# 
+# @brief Get JOB status.
+#
+# @param url - URL to Eulerian Data Warehouse JOB.
+# @param headers - Http headers.
+# @param log - Print log message.
+#
+# @return JSON reply
+#
+def job_status( url, headers, log ) :
+    return _request._to_json(
+        request_type = 'get',
+        url = url,
+        headers = headers,
+        print_log = log
+        )
+#
+# @brief Wait end of a JOB.
+#
+# @param reply - Reply to JOB creation.
+# @param headers - HTTP headers.
+# @param log - Print log message.
+#
+# @return Last reply
+#
+def job_wait( reply, headers, log ) :
+    status = reply[ 'status' ]
+    while status == 'Running' :
+        uuid, url = reply[ 'data' ]
+        time.sleep( 1 )
+        # Get job status
+        reply = job_status( url, headers, log )
+        if reply is None :
+            status = 'Error'
+        else :
+            status = reply[ 'status' ]
+    return reply
+#
+# @brief Get human readable value.
+#
+# @param value - Input value.
+#
+# @return [ value, unit ]
+#
+def unit( value ) :
+    iunit = 0
+    units = [ '', 'K', 'M', 'G', 'T', 'P' ]
+    while ( value / 1024.00 ) > 1.0 :
+        iunit += 1
+        value /= 1024
+    return "{:.2f}".format( value ) + units[ iunit ]
+#
+# @brief Add a JOB on Eulerian Data Warehouse plateform, wait end of the JOB,
+#        Download JSON reply, convert reply to CSV format then compress it.
+#
+# return Path to compressed file.
+#
 def download_edw(
         self,
         query: str,
-        status_waiting_seconds=5,
+        status_waiting_seconds=1,
         ip: str = None,
         output_path2file=None,
         override_file=False,
-        jobrun_id=None,
+        uuid=None,
 ) -> str:
     """ Fetch edw data from the API into a gzip compressed file
 
@@ -46,14 +226,16 @@ def download_edw(
             with the new datamining content
         Default: False
 
-    jobrun_id : str, optional
-        The jobrun_id to download directly from a previously requested jobrun
+    uuid : str, optional
+        The job id to download directly from a previously requested jobrun
 
     Returns
     -------
     str
         The output_path2file containing the downloaded datamining data
     """
+
+    request_begin = time.time()
     if not isinstance(query, str):
         raise TypeError("query should be a string")
 
@@ -84,7 +266,7 @@ def download_edw(
             self._gridpool_name,
             "_".join(epoch_from_to_findall[0]),
             "_".join(readers),
-        ]) + ".csv.gzip"
+        ]) + ".csv.gz"
 
         if _request._is_skippable(
                 output_path2file=output_path2file,
@@ -96,7 +278,6 @@ def download_edw(
     if ip:
         if not isinstance(ip, str):
             raise ValueError("ip should be a str type")
-
     else:
         self._log("No ip provided\
             \n Fetching external ip from https://api.ipify.org\
@@ -104,173 +285,99 @@ def download_edw(
         ")
         ip = requests.get(url="https://api.ipify.org").text
 
-    edw_token_url = f"{self._api_v2}/er/account/get_dw_session_token.json"
-    payload = {'ip': ip}
+    # Get Eulerian session token
+    self._log( "Requesting Authority services for a Session token" )
+    begin = time.time()
+    bearer = session(
+        self._api_v2, self._http_headers, ip, self._print_log
+        )
+    end = time.time()
+    self._log(
+        "Done requesting authority service : {:.2f} s".format( end - begin )
+        )
 
-    edw_token_json = _request._to_json(
-        request_type="get",
-        url=edw_token_url,
-        headers=self._http_headers,
-        params=payload,
-        print_log=self._print_log
-    )
-
-    edw_token = edw_token_json["data"]["rows"][0][0]
-    edw_http_headers = {
-        "Authorization": "Bearer " + edw_token,
+    # Create a Job
+    self._log( "Submitting JOB" )
+    begin = time.time()
+    headers = {
+        "Authorization": "Bearer " + bearer,
         "Content-Type": "application/json"
     }
-
-    # no jobrun_id provided, we send the query to get one
-    if not jobrun_id:
-        search_url = self._edw_jobs
-
-        edw_json_params = {
-            "kind": "edw#request",
-            "query": query
-        }
-
-        try:
-            search_json = _request._to_json(
-                    request_type="post",
-                    url=search_url,
-                    json_data=edw_json_params,
-                    headers=edw_http_headers,
-                    print_log=self._print_log)
-        # DEPRECATED, edw has now it's own hostname
-        except BlockingIOError as e:
-            self._log(
-                "".join(["Check with your network administrator that you can connect",
-                         f"to the hostname={self._edw_host}"]))
-            raise e
-
-        jobrun_id = search_json['data'][0]
-
-    status_url = f"{self._edw_jobs}/{jobrun_id}"
-
-    if not isinstance(status_waiting_seconds, int) or status_waiting_seconds < 5:
-        status_waiting_seconds = 5
-
-    ready = False
-
-    while not ready:
-        self._log(f"Waiting for jobrun_id={jobrun_id} to complete")
-        time.sleep(status_waiting_seconds)
-        status_json = _request._to_json(
-            request_type="get",
-            url=status_url,
-            headers=edw_http_headers,
-            print_log=self._print_log
+    reply = job_create( self._edw_jobs, headers, query, self._print_log )
+    end = time.time()
+    if reply is None :
+        self._log( "Failed to Submit JOB" )
+        sys.exit( 2 )
+    status = reply[ 'status' ]
+    if status != 'Running' :
+        self._log( "Failed to submit JOB" )
+        sys.exit( 2 )
+    uuid, url = reply[ 'data' ]
+    self._log(
+        "Done submitting JOB. {:.2f} s".format( end - begin )
         )
 
-        if status_json["status"] == "Done":
-            ready = True
-            download_url = status_json["data"][1]
+    # Wait end of Job
+    self._log( "Waiting end of JOB : " + str( uuid ) + "." )
+    begin = time.time()
+    reply = job_wait( reply, headers, self._print_log )
+    if reply[ 'status' ] != 'Done' :
+        self._log( "JOB failed." + str( reply ) )
+        sys.exit( 2 )
+    end = time.time()
+    self._log( "JOB done. {:.2f} s".format( end - begin ) )
 
-    req = urllib.request.Request(
-        url=download_url,
-        headers=self._http_headers,
-    )
-    _stream_to_csv_gzip(
-        req=req,
-        path2file=output_path2file,
-        search_url=search_url,
-        edw_http_headers=edw_http_headers,
-        print_log=self._print_log
-    )
+    # Download Job reply
+    self._log( "Downloading JOB reply from the server" )
+    begin = time.time()
+    outdir = os.path.split( output_path2file )[ 0 ]
+    path_json = job_download( self, reply, headers, outdir )
+    if path_json is None :
+        self._log( "Failed to download JOB reply" )
+        sys.exit( 2 )
+    end = time.time()
+    self._log( "JOB reply downloaded. {:.2f} s".format( end - begin ) )
 
-    self._log(f"Output csv path2file={output_path2file}")
+    # JSON to CSV
+    self._log( "Converting JSON to CSV" )
+    begin = time.time()
+    path_csv = json_to_csv( path_json )
+    end = time.time()
+    self._log( "Done converting JSON to CSV. {:.2f} s".format( end - begin ) )
+ 
+    # Compress CSV to GZ
+    self._log( "Compressing CSV file" )
+    begin = time.time()
+    gzip_compress( path_csv, output_path2file )
+    end = time.time()
+    self._log( "Done compressing CSV file. {:.2f} s".format( end - begin ) )
+    self._log(
+        "Reply file path=" + output_path2file +
+        ". {:.2f} s".format( end - request_begin )
+        )
+
+    # Kill the request on the server
+    kill( url, headers, self._print_log )
+
+    # Remove json reply 
+    os.remove( path_json )
+
+    # Remove CSV reply 
+    os.remove( path_csv )
+
     return output_path2file
-
-
-def _stream_to_csv_gzip(
-        req: urllib.request.Request,
-        path2file: str,
-        search_url: str,
-        edw_http_headers: dict,
-        print_log: bool = True
-) -> None:
-    """ Stream the Eulerian Data Warehouse data in csv gzipped file
-
-    Parameters
-    ----------
-    req : urllib.request.Request, obligatory
-        The request object to fetch from
-
-    path2file : str, obligatory
-        The path2file to put the data into
-
-    search_url: str, obligatory
-        The url to cancel the job
-
-    edw_http_headers: dict, obligatory
-        Edw authentification headers
-
-    print_log: bool
-        Set to False to hide logs
-        Default=True
-    """
-    if req.has_header('Content-Length'):
-        _log._log(
-            log=f"Content-Length={int(req.get_header('Content-Length')) / (1024 * 1024):.2f} MBs",
-            print_log=print_log)
-
-    with gzip.open(
-            filename=path2file,
-            mode="wt"
-    ) as csvfile:
-
-        csvwriter = csv.writer(
-            csvfile,
-            delimiter=';'
+#
+# @brief Kill Eulerian Data Warehouse JOB.
+#
+# @param url - URL to Eulerian Data Warehouse JOB.
+# @param headers - HTTP headers.
+# @param log - Print log message.
+#
+def kill( url, headers, log ) :
+    url = f"{url}/cancel"
+    _request._to_json(
+        request_type = "get",
+        url = url,
+        headers = headers,
+        print_log = log
         )
-
-        columns = []
-        with urllib.request.urlopen(req) as f:
-            objects = ijson.items(f, "headers.schema.item")
-            try:
-                headers = (header for header in objects)
-            except ijson.common.IncompleteJSONError as e:
-                _request.debug_urllib_response_2_file(
-                        path2file=path2file,
-                        req=req,
-                        print_log=print_log)
-                raise e
-
-            for header in headers:
-                columns.append(header[1])
-            csvwriter.writerow(columns)
-
-        with urllib.request.urlopen(req) as f:
-            objects = ijson.items(f, "rows.item")
-            try:
-                rows = (row for row in objects)
-            except ijson.common.IncompleteJSONError as e:
-                _request.debug_urllib_response_2_file(
-                        path2file=path2file,
-                        req=req,
-                        print_log=print_log)
-                raise e
-
-            for row in rows:
-                csvwriter.writerow(row)
-
-    # Kill the job to free the server memory
-    with urllib.request.urlopen(req) as f:
-        objects = ijson.items(f, "headers.uuid")
-        try:
-            uuids = (uuid for uuid in objects)
-        except ijson.common.IncompleteJSONError as e:
-            _request.debug_urllib_response_2_file(
-                path2file=path2file,
-                req=req,
-                print_log=print_log)
-            raise e
-
-        for uuid in uuids:
-            cancel_url = f"{search_url}/{uuid}/cancel"
-            _request._to_json(
-                    request_type="get",
-                    url=cancel_url,
-                    headers=edw_http_headers,
-                    print_log=print_log)
