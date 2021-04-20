@@ -125,6 +125,33 @@ class Conn:
 
         return None
 
+    def _logrewind(
+            self,
+            log: str,
+    ) -> None:
+        """ A simple logging mechanism
+        Parameters
+        ----------
+        log: str, obligatory
+            Log message to be displayed
+
+        Returns
+        -------
+            None, print a log if print_log is True
+        """
+        if not isinstance(log, str):
+            raise TypeError("log should be str dtype")
+
+        if self._print_log:
+            stack = inspect.stack()
+            frame = stack[1]
+            caller_func = frame.function
+            caller_mod = inspect.getmodule(frame[0])
+            log_msg = f"{time.ctime()}:{caller_mod.__name__}:{caller_func}: {log}"
+            print("\33[2K" + log_msg, end="\r")
+
+        return None
+
     def check_convert_realtime_filter(
             self,
             website_name: str,
