@@ -1,3 +1,6 @@
+### 0.1.43
+- Avoid being connected during JSON -> CSV -> GZ convertions
+
 ### 0.1.42
 - fix EDW new hostname
 
