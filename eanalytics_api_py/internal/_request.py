@@ -66,10 +66,10 @@ def _to_json(
     log_url = url.replace("/ea/v2/", f"/ea/v2/{api_key}/")
 
     params = urllib.parse.urlencode(params, safe='/') if params else ''
-    _log(
-        log=f"url={log_url}?{params}",
-        print_log=print_log
-    )
+    #_log(
+    #    log=f"url={log_url}?{params}",
+    #    print_log=print_log
+    #)
 
     if request_type == "get":
         r = request_map["get"](
