@@ -357,7 +357,7 @@ def download_edw(
         )
 
     # Kill the request on the server
-    kill( url, headers, self._print_log )
+    kill( url, headers )
 
     # Remove json reply 
     os.remove( path_json )
@@ -371,13 +371,9 @@ def download_edw(
 #
 # @param url - URL to Eulerian Data Warehouse JOB.
 # @param headers - HTTP headers.
-# @param log - Print log message.
 #
-def kill( url, headers, log ) :
+def kill( url, headers ) :
     url = f"{url}/cancel"
-    _request._to_json(
-        request_type = "get",
-        url = url,
-        headers = headers,
-        print_log = log
+    requests.get(
+        url, headers = headers
         )
