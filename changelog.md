@@ -1,3 +1,6 @@
+### 0.1.45
+- Avoid error when killing an Analysis who was already recycled.
+
 ### 0.1.44
 - Remove some traces.
 
