@@ -199,7 +199,10 @@ def download_edw(
         status_waiting_seconds=1,
         ip: str = None,
         output_path2file=None,
+        accept="application/json",
+        encoding="identity",
         override_file=False,
+        compress=True,
         uuid=None,
 ) -> str:
     """ Fetch edw data from the API into a gzip compressed file
@@ -225,6 +228,9 @@ def download_edw(
         If set to True, will override output_path2file (if exists)
             with the new datamining content
         Default: False
+
+    compress : bool, optional
+        If set to True, CSV reply file is compressed
 
     uuid : str, optional
         The job id to download directly from a previously requested jobrun
@@ -259,6 +265,8 @@ def download_edw(
     if output_path2file:
         if not isinstance(output_path2file, str):
             raise TypeError("output_path2file should be a str type")
+        if compress :
+            output_path2file += ".gz"
 
     else:
         output_path2file = '_'.join([
@@ -266,7 +274,10 @@ def download_edw(
             self._gridpool_name,
             "_".join(epoch_from_to_findall[0]),
             "_".join(readers),
-        ]) + ".csv.gz"
+        ]) + ".csv"
+
+        if compress :
+            output_path2file += ".gz"
 
         if _request._is_skippable(
                 output_path2file=output_path2file,
@@ -301,7 +312,9 @@ def download_edw(
     begin = time.time()
     headers = {
         "Authorization": "Bearer " + bearer,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept-Encoding" : encoding,
+        "Accept" : accept
     }
     reply = job_create( self._edw_jobs, headers, query, self._print_log )
     end = time.time()
@@ -345,16 +358,20 @@ def download_edw(
     end = time.time()
     self._log( "Done converting JSON to CSV. {:.2f} s".format( end - begin ) )
  
-    # Compress CSV to GZ
-    self._log( "Compressing CSV file" )
-    begin = time.time()
-    gzip_compress( path_csv, output_path2file )
-    end = time.time()
-    self._log( "Done compressing CSV file. {:.2f} s".format( end - begin ) )
-    self._log(
-        "Reply file path=" + output_path2file +
-        ". {:.2f} s".format( end - request_begin )
-        )
+    if compress :
+        # Compress CSV to GZ
+        self._log( "Compressing CSV file" )
+        begin = time.time()
+        gzip_compress( path_csv, output_path2file )
+        end = time.time()
+        self._log( "Done compressing CSV file. {:.2f} s".format( end - begin ) )
+        self._log(
+            "Reply file path=" + output_path2file +
+            ". {:.2f} s".format( end - request_begin )
+            )
+    else :
+        # Rename CSV file
+        os.rename( path_csv, output_path2file )
 
     # Kill the request on the server
     kill( url, headers )
@@ -363,7 +380,8 @@ def download_edw(
     os.remove( path_json )
 
     # Remove CSV reply 
-    os.remove( path_csv )
+    if compress :
+        os.remove( path_csv )
 
     return output_path2file
 #
