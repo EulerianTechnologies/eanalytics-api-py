@@ -1,3 +1,6 @@
+### 0.1.46
+- Take into account accept parameter to download_edw(), used to select reply output format, accepted format are : application/json, application/parquet, text/csv
+
 ### 0.1.45
 - Final compression of CSV file is now optional( compress=True | False )
 - Add an extra argument to download_edw() function used to enable transport layer compression ( encoding=gzip|identity )
