@@ -42,13 +42,13 @@ def session( domain, headers, ip, log ) :
 #
 def gzip_compress( path_in, path_out ) :
     try :
-        f = open( path_in, "r" )
+        f = open( path_in, "rb" )
         data = f.read()
         f.close()
     except IOError as e :
         print( str( e ) )
         raise e
-    with gzip.open( filename = path_out, mode = "wt" ) as gzipfile :
+    with gzip.open( filename = path_out, mode = "wb" ) as gzipfile :
         gzipfile.write( data )
         gzipfile.close()
 #
@@ -81,11 +81,18 @@ def job_create( url, headers, query, log ) :
 #
 # @return JSON reply file path.
 #
-def job_download( conn, reply, headers, directory, prefix ) :
+def job_download( conn, reply, headers, directory ) :
     uuid, url = reply[ 'data' ]
     reply = requests.get( url, headers = headers, stream = True )
     if reply.status_code != 200 :
         return None
+    # prefix is an advice on which reply format we expect.
+    if reply.headers[ 'Content-Type' ] == 'application/json' :
+        prefix = 'json'
+    elif reply.headers[ 'Content-Type' ] == 'text/plain' :
+        prefix = 'parquet'
+    elif reply.headers[ 'Content-Type' ] == 'text/csv' :
+        prefix = 'csv'
     if directory and directory != '' :
         path = directory + '/' + str( uuid ) + '.' + prefix
     else :
@@ -104,7 +111,7 @@ def job_download( conn, reply, headers, directory, prefix ) :
         stream.write( line )
     conn._log( "" )
     stream.close()
-    return path
+    return [ path, prefix ]
 # 
 # @brief Get JOB status.
 #
@@ -248,9 +255,6 @@ def download_edw(
             raise ValueError(
                 f"Given file path prefix : {prefix} doesnt match accept reply format {accept}"
                 )
-        # Append gz prefix on compressed reply file
-        if compress :
-            output_path2file += ".gz"
     else:
         # Build reply file path
         output_path2file = '_'.join([
@@ -259,11 +263,6 @@ def download_edw(
             "_".join( epochs_found[ 0 ] ),
             "_".join( readers ),
         ]) + '.' + format
-
-        # Append gz prefix on compressed reply file
-        if compress :
-            output_path2file += ".gz"
-
         # If this file already exists we are done
         if _request._is_skippable(
             output_path2file = output_path2file,
@@ -324,19 +323,23 @@ def download_edw(
 
     # Download Job reply
     self._log( "Downloading JOB reply from the server" )
+    outdir = os.path.split( output_path2file )[ 0 ]
     begin = time.time()
-    paths = os.path.split( output_path2file )
-    outdir = paths[ 0 ]
-    prefix = paths[ 1 ].split( '.' )[ -1 ]
-    path = job_download( self, reply, headers, outdir, prefix )
+    path, prefix = job_download( self, reply, headers, outdir )
     if path is None :
         self._log( "Failed to download JOB reply" )
         sys.exit( 2 )
     end = time.time()
     self._log( "JOB reply downloaded. {:.2f} s".format( end - begin ) )
 
+    # If gateway doesn't know the request reply format, rename output file
+    # to reflect really downloaded format
+    if format != prefix :
+        output_path2file = output_path2file[ : output_path2file.rfind( format ) ] + prefix
+
     # Compress reply if requested
     if compress :
+        output_path2file += '.gz'
         gzip_compress( path, output_path2file )
         os.remove( path )
     else :
