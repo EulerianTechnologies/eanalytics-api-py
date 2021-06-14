@@ -85,7 +85,7 @@ def job_download( conn, reply, headers, directory ) :
     uuid, url = reply[ 'data' ]
     reply = requests.get( url, headers = headers, stream = True )
     if reply.status_code != 200 :
-        return None
+        return [ None, None ]
     # prefix is an advice on which reply format we expect.
     if reply.headers[ 'Content-Type' ] == 'application/json' :
         prefix = 'json'
@@ -99,7 +99,7 @@ def job_download( conn, reply, headers, directory ) :
         path = str( uuid ) + '.' + prefix
     stream = open( path, 'wb' )
     if stream is None :
-        return None
+        return [ None, None ]
     total = 0
     length = reply.headers[ 'Content-Length' ]
     for line in reply.iter_content( 8192 ) :
@@ -263,12 +263,17 @@ def download_edw(
             "_".join( epochs_found[ 0 ] ),
             "_".join( readers ),
         ]) + '.' + format
-        # If this file already exists we are done
-        if _request._is_skippable(
-            output_path2file = output_path2file,
-            override_file = override_file,
-            print_log = self._print_log ) :
-            return outfile
+
+    skippable = output_path2file
+    if compress :
+        skippable += '.gz'
+
+    # If this file already exists we are done
+    if _request._is_skippable(
+        output_path2file = skippable,
+        override_file = override_file,
+        print_log = self._print_log ) :
+        return output_path2file
 
     if not ip :
         self._log("No ip provided\
@@ -335,7 +340,9 @@ def download_edw(
     # If gateway doesn't know the request reply format, rename output file
     # to reflect really downloaded format
     if format != prefix :
+        self._log( "Requested reply format can't be provided." )
         output_path2file = output_path2file[ : output_path2file.rfind( format ) ] + prefix
+        self._log( "JSON reply format is returned. " + output_path2file )
 
     # Compress reply if requested
     if compress :
