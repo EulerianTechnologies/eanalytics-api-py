@@ -64,7 +64,6 @@ def job_create( url, headers, query, log ) :
         "kind" : "edw#request",
         "query" : query
     }
-    print( "URL : " + url )
     return _request._to_json(
         request_type = 'post',
         url = url,
