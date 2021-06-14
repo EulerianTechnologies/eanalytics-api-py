@@ -1,3 +1,7 @@
+### 0.1.48
+- GZIP compression expect a binary input data prior than an utf8 one.
+- If Data Warehouse Server can't provide expected reply output format, rename output file to reflect the change.
+
 ### 0.1.47
 - Take into account accept parameter to download_edw(), used to select reply output format, accepted format are : application/json, application/parquet, text/csv
 
