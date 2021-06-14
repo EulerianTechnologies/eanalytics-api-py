@@ -52,40 +52,6 @@ def gzip_compress( path_in, path_out ) :
         gzipfile.write( data )
         gzipfile.close()
 #
-# @brief Convert JSON reply file to CSV file.
-#
-# @param path_json - JSON file path.
-#
-# @return CSV file path
-#
-def json_to_csv( path_json ) :
-    pattern = re.compile( "^/.+/\d+" )
-    match = pattern.search( path_json )
-    path_csv = match.group() + ".csv"
-    stream_in = open( path_json, "r" )
-    stream_out = open( path_csv, "w" )
-    writer = csv.writer( stream_out, delimiter = ";" )
-    objects = ijson.items( stream_in, "headers.schema.item" )
-    try :
-        headers = ( header for header in objects )
-    except ijson.common.IncompleteJSONError as e :
-        raise e
-    columns = []
-    for header in headers :
-        columns.append( header[ 1 ] )
-    writer.writerow( columns )
-    stream_in.seek( 0 )
-    objects = ijson.items( stream_in, "rows.item" )
-    try :
-        rows = ( row for row in objects )
-    except ijson.common.IncompleteJSONError as e :
-        raise e
-    for row in rows :
-        writer.writerow( row )
-    stream_out.close()
-    stream_in.close()
-    return path_csv
-#
 # @brief Create a JOB on Eulerian Data Warehouse Platform.
 #
 # @param url - Url of Eulerian Data Warehouse Platform.
@@ -98,6 +64,7 @@ def job_create( url, headers, query, log ) :
         "kind" : "edw#request",
         "query" : query
     }
+    print( "URL : " + url )
     return _request._to_json(
         request_type = 'post',
         url = url,
@@ -115,17 +82,20 @@ def job_create( url, headers, query, log ) :
 #
 # @return JSON reply file path.
 #
-def job_download( conn, reply, headers, directory ) :
+def job_download( conn, reply, headers, directory, prefix ) :
     uuid, url = reply[ 'data' ]
     reply = requests.get( url, headers = headers, stream = True )
     if reply.status_code != 200 :
         return None
-    length = reply.headers[ 'Content-Length' ]
-    path = directory + '/' + str( uuid ) + '.json'
+    if directory and directory != '' :
+        path = directory + '/' + str( uuid ) + '.' + prefix
+    else :
+        path = str( uuid ) + '.' + prefix
     stream = open( path, 'wb' )
     if stream is None :
         return None
     total = 0
+    length = reply.headers[ 'Content-Length' ]
     for line in reply.iter_content( 8192 ) :
         total += len( line )
         conn._logrewind(
@@ -194,16 +164,16 @@ def unit( value ) :
 # return Path to compressed file.
 #
 def download_edw(
-        self,
-        query: str,
-        status_waiting_seconds=1,
-        ip: str = None,
-        output_path2file=None,
-        accept="application/json",
-        encoding="identity",
-        override_file=False,
-        compress=True,
-        uuid=None,
+    self,
+    query: str,
+    status_waiting_seconds=1,
+    ip: str = None,
+    output_path2file=None,
+    accept="application/json",
+    encoding="identity",
+    override_file=False,
+    compress=True,
+    uuid=None,
 ) -> str:
     """ Fetch edw data from the API into a gzip compressed file
 
@@ -230,7 +200,14 @@ def download_edw(
         Default: False
 
     compress : bool, optional
-        If set to True, CSV reply file is compressed
+        If set to True, reply file is compressed
+
+    accept : str, optional
+        Specify expected reply output format ( application/json, 
+         application/parquet, text/csv )
+
+    encoding : str, optional
+        Specify transport layer encoding ( identity, gzip )
 
     uuid : str, optional
         The job id to download directly from a previously requested jobrun
@@ -241,60 +218,66 @@ def download_edw(
         The output_path2file containing the downloaded datamining data
     """
 
+    # Parse query looking for request timerange
     request_begin = time.time()
-    if not isinstance(query, str):
-        raise TypeError("query should be a string")
+    epochs_found = re.findall( r'{\W+?(\d+)\W+?(\d+)\W+?}', query )
+    if not epochs_found :
+        raise ValueError( 
+            f"Could not read request timerange : \n{query}"
+            )
 
-    epoch_from_to_findall = re.findall(
-        r'{\W+?(\d+)\W+?(\d+)\W+?}',  # { 1602958590 1602951590 }
-        query
-    )
-    if not epoch_from_to_findall:
-        raise ValueError(f"Could not read epoch_from and epoch_to from query=\n{query}")
-
-    readers_findall = re.findall(r'(\w+):(\w+)@([\w_-]+)', query)  # ea:pageview@demo-fr
-    if not readers_findall:
-        raise ValueError(f"Could not read READER from query=\n{query}")
+    # Parse query looking for request readers
+    readers_found = re.findall( r'(\w+):(\w+)@([\w_-]+)', query )
+    if not readers_found :
+        raise ValueError(
+            f"Could not read READER from query=\n{query}"
+            )
 
     readers = []
-    for reader in readers_findall:
-        storage_name, table_name, website_name = reader
-        self._is_allowed_website_name(website_name)
-        readers += [storage_name, table_name, website_name]
+    for reader in readers_found :
+        store, object, site = reader
+        self._is_allowed_website_name( site )
+        readers += [ store, object, site ]
 
-    if output_path2file:
-        if not isinstance(output_path2file, str):
-            raise TypeError("output_path2file should be a str type")
+    # Get accept reply format 
+    format = accept.split( '/' )[ 1 ]
+
+    if output_path2file :
+        # Check that given reply file path prefix match accepted format
+        prefix = output_path2file.split( '/' )[ -1 ].split( '.' )[ -1 ]
+        if prefix != format :
+            raise ValueError(
+                f"Given file path prefix : {prefix} doesnt match accept reply format {accept}"
+                )
+        # Append gz prefix on compressed reply file
         if compress :
             output_path2file += ".gz"
-
     else:
+        # Build reply file path
         output_path2file = '_'.join([
-            "dw",
+            "edw",
             self._gridpool_name,
-            "_".join(epoch_from_to_findall[0]),
-            "_".join(readers),
-        ]) + ".csv"
+            "_".join( epochs_found[ 0 ] ),
+            "_".join( readers ),
+        ]) + '.' + format
 
+        # Append gz prefix on compressed reply file
         if compress :
             output_path2file += ".gz"
 
+        # If this file already exists we are done
         if _request._is_skippable(
-                output_path2file=output_path2file,
-                override_file=override_file,
-                print_log=self._print_log
-        ):
-            return output_path2file
+            output_path2file = output_path2file,
+            override_file = override_file,
+            print_log = self._print_log ) :
+            return outfile
 
-    if ip:
-        if not isinstance(ip, str):
-            raise ValueError("ip should be a str type")
-    else:
+    if not ip :
         self._log("No ip provided\
             \n Fetching external ip from https://api.ipify.org\
             \nif using a vpn, please provide the vpn ip\
         ")
-        ip = requests.get(url="https://api.ipify.org").text
+        ip = requests.get( url = "https://api.ipify.org" ).text
 
     # Get Eulerian session token
     self._log( "Requesting Authority services for a Session token" )
@@ -323,7 +306,7 @@ def download_edw(
         sys.exit( 2 )
     status = reply[ 'status' ]
     if status != 'Running' :
-        self._log( "Failed to submit JOB" )
+        self._log( "Failed to submit JOB." )
         sys.exit( 2 )
     uuid, url = reply[ 'data' ]
     self._log(
@@ -343,45 +326,26 @@ def download_edw(
     # Download Job reply
     self._log( "Downloading JOB reply from the server" )
     begin = time.time()
-    outdir = os.path.split( output_path2file )[ 0 ]
-    path_json = job_download( self, reply, headers, outdir )
-    if path_json is None :
+    paths = os.path.split( output_path2file )
+    outdir = paths[ 0 ]
+    prefix = paths[ 1 ].split( '.' )[ -1 ]
+    path = job_download( self, reply, headers, outdir, prefix )
+    if path is None :
         self._log( "Failed to download JOB reply" )
         sys.exit( 2 )
     end = time.time()
     self._log( "JOB reply downloaded. {:.2f} s".format( end - begin ) )
 
-    # JSON to CSV
-    self._log( "Converting JSON to CSV" )
-    begin = time.time()
-    path_csv = json_to_csv( path_json )
-    end = time.time()
-    self._log( "Done converting JSON to CSV. {:.2f} s".format( end - begin ) )
- 
+    # Compress reply if requested
     if compress :
-        # Compress CSV to GZ
-        self._log( "Compressing CSV file" )
-        begin = time.time()
-        gzip_compress( path_csv, output_path2file )
-        end = time.time()
-        self._log( "Done compressing CSV file. {:.2f} s".format( end - begin ) )
-        self._log(
-            "Reply file path=" + output_path2file +
-            ". {:.2f} s".format( end - request_begin )
-            )
+        gzip_compress( path, output_path2file )
+        os.remove( path )
     else :
-        # Rename CSV file
-        os.rename( path_csv, output_path2file )
+        # Rename file
+        os.rename( path, output_path2file )
 
     # Kill the request on the server
     kill( url, headers )
-
-    # Remove json reply 
-    os.remove( path_json )
-
-    # Remove CSV reply 
-    if compress :
-        os.remove( path_csv )
 
     return output_path2file
 #
