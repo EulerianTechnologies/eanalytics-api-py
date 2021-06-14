@@ -1,4 +1,8 @@
 ### 0.1.45
+- Final compression of CSV file is now optional( compress=True | False )
+- Add an extra argument to download_edw() function used to enable transport layer compression ( encoding=gzip|identity )
+
+### 0.1.45
 - Avoid error when killing an Analysis who was already recycled.
 
 ### 0.1.44
