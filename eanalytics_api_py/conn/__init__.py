@@ -67,7 +67,7 @@ class Conn:
         if host != None :
             if secure == False :
                 proto = 'https'
-            else
+            else :
                 proto = 'http'
             self._edw_host = f"{proto}://{host}"
         else :
