@@ -242,7 +242,7 @@ def download_edw(
     readers = []
     for reader in readers_found :
         store, object, site = reader
-        self._is_allowed_website_name( site )
+        #self._is_allowed_website_name( site )
         readers += [ store, object, site ]
 
     # Get accept reply format 
