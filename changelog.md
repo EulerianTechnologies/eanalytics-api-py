@@ -1,3 +1,9 @@
+### 0.1.50
+- Add optional parameter 'host' to Eulerian Data Warehouse Platform Connection. It forces a dedicated EDW platform host.
+- Add optional parameter 'secure' to Eulerian Data Warehouse Platform Connection. It forces usage of unsecure connection.
+- Add optional parameter 'authority' to Eulerian Data Warehouse Platform Connection. It forces usage of a dedicated Eulerian Authority Platform.
+- Remove control of Authorized WebSites ( Already done in EDW process )
+
 ### 0.1.49
 - Fix compatibilities issues with the former Gateway.
 
