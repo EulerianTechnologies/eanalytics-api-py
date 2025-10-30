@@ -26,6 +26,15 @@ class Conn:
         Set to False to hide log message
         Default: True
 
+    host: str, optional
+        Force a dedicated Eulerian Data Warehouse host
+
+    secure: bool, optional
+        Force usage of unsecure connection
+        
+    authority: str, optional
+        Force usage of dedicated authority platform
+
     Returns
     -------
         Class is instantiated
@@ -36,7 +45,10 @@ class Conn:
             gridpool_name: str,
             datacenter: str,
             api_key: str,
-            print_log: bool = True
+            print_log: bool = True,
+            host: str = None,
+            secure: bool = True,
+            authority: str = None
     ):
         if not isinstance(print_log, bool):
             raise TypeError("print_log should be a boolean type")
@@ -52,14 +64,24 @@ class Conn:
 
         self._datacenter = datacenter
         self._gridpool_name = gridpool_name
-        self._edw_host = f"https://edw.ea.eulerian.{datacenter}"
+        if host != None :
+            if secure == False :
+                proto = 'https'
+            else
+                proto = 'http'
+            self._edw_host = f"{proto}://{host}"
+        else :
+            self._edw_host = f"https://edw.ea.eulerian.{datacenter}"
         self._edw_jobs = f"{self._edw_host}/edw/jobs"
-        self._base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
+        if authority != None :
+            self._base_url = f"https://{gridpool_name}.api.{authority}.eulerian.fr"
+        else :
+            self._base_url = f"https://{gridpool_name}.api.eulerian.{datacenter}"
         self._api_v2 = f"{self._base_url}/ea/v2"
         self._api_key = api_key
         self._http_headers = {"Authorization": f"Bearer {api_key}"}
         self._print_log = print_log
-        self._check_credentials()
+        #self._check_credentials()
 
     # Import class methods
     from ._download_datamining import download_datamining
