@@ -1,3 +1,6 @@
+### 0.1.51
+- Add optional argument 'authority' to notebooks.  
+
 ### 0.1.50
 - Add optional parameter 'host' to Eulerian Data Warehouse Platform Connection. It forces a dedicated EDW platform host.
 - Add optional parameter 'secure' to Eulerian Data Warehouse Platform Connection. It forces usage of unsecure connection.
